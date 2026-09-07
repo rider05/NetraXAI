@@ -2189,10 +2189,6 @@ async function initApp() {
   try {
     state.samples = await fetchSamples();
     renderPatientList();
-    // Auto-select first sample to showcase workstation immediately!
-    if (state.samples.length > 0) {
-      executeScreening({ source: "sample", id: state.samples[6].id }); // L2 sample (Moderate NPDR) as demo hero!
-    }
   } catch (err) {
     showToast(`Could not connect to NetraXAI server: ${err.message}`);
   }
