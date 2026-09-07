@@ -1,0 +1,2205 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NetraXAI — Clinical AI Diagnostic Workstation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', Consolas, monospace;
+    
+    /* Dark Clinical Palette (Default) */
+    --bg-base: #070c14;
+    --bg-surface: #0e1726;
+    --bg-surface-elevated: #142033;
+    --bg-surface-subtle: #19273f;
+    --border-subtle: #1e304d;
+    --border-strong: #2c456d;
+    --border-focus: #00d2b4;
+    
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --text-inverse: #0f172a;
+    
+    --accent-cyan: #00d2b4;
+    --accent-cyan-subtle: rgba(0, 210, 180, 0.12);
+    --accent-cyan-border: rgba(0, 210, 180, 0.35);
+    
+    --accent-blue: #3b82f6;
+    --accent-blue-deep: #1d4ed8;
+    --accent-blue-subtle: rgba(59, 130, 246, 0.12);
+    
+    --grade-0: #10b981; /* No DR */
+    --grade-1: #06b6d4; /* Mild */
+    --grade-2: #f59e0b; /* Moderate */
+    --grade-3: #f97316; /* Severe */
+    --grade-4: #ec4899; /* PDR */
+    
+    --status-ok: #10b981;
+    --status-ok-bg: rgba(16, 185, 129, 0.12);
+    --status-ok-border: rgba(16, 185, 129, 0.3);
+    
+    --status-warn: #f59e0b;
+    --status-warn-bg: rgba(245, 158, 11, 0.12);
+    --status-warn-border: rgba(245, 158, 11, 0.3);
+    
+    --status-bad: #ef4444;
+    --status-bad-bg: rgba(239, 68, 68, 0.12);
+    --status-bad-border: rgba(239, 68, 68, 0.3);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+    --shadow-cyan: 0 0 20px rgba(0, 210, 180, 0.25);
+  }
+
+  [data-theme="light"] {
+    --bg-base: #f4f7fb;
+    --bg-surface: #ffffff;
+    --bg-surface-elevated: #f8fafc;
+    --bg-surface-subtle: #eef3f9;
+    --border-subtle: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --border-focus: #0d9488;
+    
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --text-inverse: #ffffff;
+    
+    --accent-cyan: #0d9488;
+    --accent-cyan-subtle: rgba(13, 148, 136, 0.1);
+    --accent-cyan-border: rgba(13, 148, 136, 0.3);
+    
+    --accent-blue: #2563eb;
+    --accent-blue-deep: #1e40af;
+    --accent-blue-subtle: rgba(37, 99, 235, 0.08);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.08);
+    --shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.12);
+    --shadow-cyan: 0 0 16px rgba(13, 148, 136, 0.2);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg-base);
+    color: var(--text-primary);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* TOP HEADER / APP BAR */
+  header.app-header {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+
+  .brand-group {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .brand-logo {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #00d2b4, #2563eb);
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    font-size: 18px;
+    color: #ffffff;
+    box-shadow: 0 0 16px rgba(0, 210, 180, 0.35);
+    letter-spacing: -0.5px;
+    flex-shrink: 0;
+  }
+
+  .brand-text h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .brand-text .version-tag {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: var(--accent-cyan-subtle);
+    border: 1px solid var(--accent-cyan-border);
+    color: var(--accent-cyan);
+    font-family: var(--font-mono);
+    font-weight: 600;
+  }
+
+  .brand-text .subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .header-telemetry {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .telemetry-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--status-ok);
+    box-shadow: 0 0 8px var(--status-ok);
+    animation: pulseGlow 2s infinite;
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--font-sans);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+    text-decoration: none;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent-cyan), #0284c7);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 210, 180, 0.25);
+  }
+
+  .btn-primary:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    background: var(--bg-surface-elevated);
+    border-color: var(--border-subtle);
+    color: var(--text-primary);
+  }
+
+  .btn-secondary:hover {
+    background: var(--bg-surface-subtle);
+    border-color: var(--border-strong);
+  }
+
+  .theme-toggle-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.15s ease;
+  }
+
+  .theme-toggle-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+  }
+
+  /* NAV TABS */
+  nav.app-nav {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 0 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .nav-tabs {
+    display: flex;
+    gap: 4px;
+  }
+
+  .nav-tab {
+    padding: 12px 18px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .nav-tab:hover {
+    color: var(--text-primary);
+  }
+
+  .nav-tab.active {
+    color: var(--accent-cyan);
+    border-bottom-color: var(--accent-cyan);
+  }
+
+  .nav-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  /* MAIN WORKSPACE LAYOUT */
+  main.app-workspace {
+    padding: 18px 24px 40px;
+    max-width: 1780px;
+    margin: 0 auto;
+  }
+
+  .screen-layout {
+    display: grid;
+    grid-template-columns: 320px minmax(500px, 1fr) 390px;
+    gap: 20px;
+    align-items: start;
+  }
+
+  @media (max-width: 1350px) {
+    .screen-layout {
+      grid-template-columns: 300px 1fr;
+    }
+    .col-intelligence {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .screen-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* CARDS & CONTAINERS */
+  .card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-surface-elevated);
+  }
+
+  .card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: -0.2px;
+  }
+
+  .card-body {
+    padding: 16px;
+  }
+
+  /* LEFT COLUMN: PATIENT QUEUE & LIBRARY */
+  .search-box {
+    position: relative;
+    margin-bottom: 12px;
+  }
+
+  .search-box input {
+    width: 100%;
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 8px 12px 8px 34px;
+    font-size: 13px;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .search-box input:focus {
+    border-color: var(--accent-cyan);
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 14px;
+    pointer-events: none;
+  }
+
+  .filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  .f-chip {
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 600;
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .f-chip:hover {
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+  }
+
+  .f-chip.active {
+    background: var(--accent-cyan-subtle);
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+  }
+
+  /* UPLOAD DROPZONE */
+  .upload-zone {
+    border: 1.5px dashed var(--border-strong);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+    background: var(--bg-surface-elevated);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-bottom: 14px;
+  }
+
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent-cyan);
+    background: var(--accent-cyan-subtle);
+  }
+
+  .upload-zone .up-icon {
+    font-size: 24px;
+    color: var(--accent-cyan);
+    margin-bottom: 4px;
+  }
+
+  .upload-zone .up-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .upload-zone .up-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* PATIENT CARDS LIST */
+  .patient-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: calc(100vh - 350px);
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .patient-list::-webkit-scrollbar {
+    width: 5px;
+  }
+  .patient-list::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 4px;
+  }
+
+  .patient-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    border-radius: 10px;
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+  }
+
+  .patient-item:hover {
+    border-color: var(--accent-cyan);
+    transform: translateX(2px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .patient-item.active {
+    border-color: var(--accent-cyan);
+    background: var(--accent-cyan-subtle);
+    box-shadow: 0 0 12px rgba(0, 210, 180, 0.18);
+  }
+
+  .patient-thumb {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: #020617;
+    border: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+  }
+
+  .patient-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .patient-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .patient-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+  }
+
+  .grade-chip {
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 10.5px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .g-0 { background: rgba(16, 185, 129, 0.15); color: var(--grade-0); border: 1px solid rgba(16, 185, 129, 0.3); }
+  .g-1 { background: rgba(6, 182, 212, 0.15); color: var(--grade-1); border: 1px solid rgba(6, 182, 212, 0.3); }
+  .g-2 { background: rgba(245, 158, 11, 0.15); color: var(--grade-2); border: 1px solid rgba(245, 158, 11, 0.3); }
+  .g-3 { background: rgba(249, 115, 22, 0.15); color: var(--grade-3); border: 1px solid rgba(249, 115, 22, 0.3); }
+  .g-4 { background: rgba(236, 72, 153, 0.15); color: var(--grade-4); border: 1px solid rgba(236, 72, 153, 0.3); }
+
+  /* CENTER COLUMN: DIAGNOSTIC VIEWPORT & PIPELINE HUD */
+  .viewport-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 14px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 14px 18px;
+  }
+
+  .active-patient-meta h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .active-patient-meta .details {
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+    font-family: var(--font-mono);
+  }
+
+  /* PIPELINE STEP TRACKER */
+  .pipeline-hud {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .pipeline-step {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    transition: all 0.2s ease;
+  }
+
+  .pipeline-step .step-num {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-strong);
+    display: grid;
+    place-items: center;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .pipeline-step .step-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .pipeline-step.done {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: var(--status-ok-bg);
+  }
+
+  .pipeline-step.done .step-num {
+    background: var(--status-ok);
+    color: #ffffff;
+    border-color: var(--status-ok);
+  }
+
+  .pipeline-step.done .step-title {
+    color: var(--text-primary);
+  }
+
+  .pipeline-step.running {
+    border-color: var(--accent-cyan);
+    background: var(--accent-cyan-subtle);
+    box-shadow: 0 0 10px rgba(0, 210, 180, 0.25);
+  }
+
+  .pipeline-step.running .step-num {
+    background: var(--accent-cyan);
+    color: #ffffff;
+    animation: pulseGlow 1.2s infinite;
+  }
+
+  /* HIGH-PRECISION VIEWPORT CANVAS */
+  .viewport-container {
+    background: #020617;
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    min-height: 480px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-md);
+  }
+
+  .viewport-toolbar {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  .v-tool-group {
+    background: rgba(14, 23, 38, 0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 4px;
+    display: flex;
+    gap: 4px;
+    pointer-events: auto;
+  }
+
+  .v-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .v-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .v-btn.active {
+    color: #ffffff;
+    background: var(--accent-cyan);
+  }
+
+  .zoom-controls {
+    display: flex;
+    gap: 4px;
+  }
+
+  .zoom-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: rgba(14, 23, 38, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+
+  .canvas-stage {
+    flex: 1;
+    position: relative;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    cursor: grab;
+    user-select: none;
+    min-height: 440px;
+  }
+
+  .canvas-stage:active {
+    cursor: grabbing;
+  }
+
+  .canvas-image-wrapper {
+    position: relative;
+    transition: transform 0.08s ease-out;
+    transform-origin: center center;
+    max-width: 90%;
+    max-height: 90%;
+  }
+
+  .canvas-image {
+    display: block;
+    max-width: 100%;
+    max-height: 520px;
+    border-radius: 10px;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+    object-fit: contain;
+  }
+
+  /* SPLIT COMPARATOR */
+  .split-container {
+    position: relative;
+    width: 100%;
+    max-width: 520px;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 10px;
+    margin: 0 auto;
+    display: none;
+  }
+
+  .split-container img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .split-overlay-image {
+    clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
+  }
+
+  .split-divider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    background: #ffffff;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+    cursor: ew-resize;
+  }
+
+  .split-handle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    color: #0f172a;
+    font-weight: 800;
+  }
+
+  .viewport-footer {
+    padding: 10px 16px;
+    background: rgba(14, 23, 38, 0.95);
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11.5px;
+    color: var(--text-secondary);
+  }
+
+  .lesion-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .lesion-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .l-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+
+  /* RIGHT COLUMN: CLINICAL INTELLIGENCE & TRIAGE */
+  .col-intelligence {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* DIAGNOSTIC VERDICT CARD */
+  .verdict-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .verdict-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+    background: var(--accent-cyan);
+  }
+
+  .verdict-card.referable::before {
+    background: var(--status-bad);
+  }
+
+  .verdict-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .verdict-grade-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .verdict-grade-text {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+
+  .triage-alert {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 10px;
+  }
+
+  .triage-alert.refer {
+    background: var(--status-bad-bg);
+    border: 1px solid var(--status-bad-border);
+    color: var(--status-bad);
+  }
+
+  .triage-alert.non-refer {
+    background: var(--status-ok-bg);
+    border: 1px solid var(--status-ok-border);
+    color: var(--status-ok);
+  }
+
+  /* CONFIDENCE GAUGE */
+  .confidence-box {
+    margin-top: 14px;
+    background: var(--bg-surface-elevated);
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid var(--border-subtle);
+  }
+
+  .conf-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+
+  .conf-bar-bg {
+    height: 8px;
+    background: var(--border-strong);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .conf-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0284c7, var(--accent-cyan));
+    border-radius: 4px;
+    transition: width 0.6s ease;
+  }
+
+  /* QUALITY GATE CARD */
+  .quality-metric-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+
+  .q-label {
+    width: 90px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+
+  .q-bar-bg {
+    flex: 1;
+    height: 6px;
+    background: var(--bg-surface-subtle);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .q-bar-fill {
+    height: 100%;
+    background: var(--accent-cyan);
+    border-radius: 3px;
+  }
+
+  .q-val {
+    width: 38px;
+    text-align: right;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  /* BIOMARKER MATRIX */
+  .biomarker-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .bio-card {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .bio-name {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .bio-count {
+    font-size: 16px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+  }
+
+  /* ACTION ROW */
+  .action-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  /* TAB 2: DASHBOARD / AUDIT */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .kpi-tile {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 18px;
+  }
+
+  .kpi-tile .kpi-num {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    line-height: 1.1;
+  }
+
+  .kpi-tile .kpi-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  .audit-table-wrap {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  table.audit-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+  }
+
+  table.audit-table th {
+    padding: 12px 16px;
+    background: var(--bg-surface-elevated);
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  table.audit-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+  }
+
+  table.audit-table tr:hover {
+    background: var(--bg-surface-elevated);
+  }
+
+  /* REPORT MODAL & PRINT STYLING */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(3, 7, 18, 0.8);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: none;
+    place-items: center;
+    padding: 24px;
+    overflow-y: auto;
+  }
+
+  .modal-backdrop.open {
+    display: grid;
+  }
+
+  .report-slip {
+    background: #ffffff;
+    color: #0f172a;
+    width: 100%;
+    max-width: 800px;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    margin: auto;
+    font-family: var(--font-sans);
+  }
+
+  .slip-header {
+    background: linear-gradient(135deg, #0b2e52, #1766b0);
+    color: #ffffff;
+    padding: 24px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .slip-body {
+    padding: 28px 30px;
+  }
+
+  .slip-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 18px 0;
+  }
+
+  .slip-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+
+  .slip-box-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 6px;
+  }
+
+  .slip-images {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0;
+  }
+
+  .slip-img-card {
+    text-align: center;
+  }
+
+  .slip-img-card img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+  }
+
+  .slip-footer {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 24px;
+  }
+
+  .doctor-sign {
+    border-top: 1.5px solid #0f172a;
+    padding-top: 6px;
+    width: 200px;
+    text-align: center;
+    font-size: 12px;
+    color: #475569;
+  }
+
+  @media print {
+    body * { visibility: hidden; }
+    .report-slip, .report-slip * { visibility: visible; }
+    .report-slip {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      box-shadow: none;
+      border: none;
+    }
+    .no-print { display: none !important; }
+  }
+
+  /* TOAST NOTIFICATION */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-strong);
+    color: var(--text-primary);
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    box-shadow: var(--shadow-lg);
+    display: none;
+    z-index: 2000;
+    animation: slideUp 0.2s ease;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(12px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .spinner-ring {
+    width: 28px;
+    height: 28px;
+    border: 3px solid rgba(0, 210, 180, 0.2);
+    border-top-color: var(--accent-cyan);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 20px auto;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- APP HEADER -->
+<header class="app-header">
+  <div class="brand-group">
+    <div class="brand-logo">NI</div>
+    <div class="brand-text">
+      <h1>NetraXAI <span class="version-tag">SIH26038 · MathWorks</span></h1>
+      <div class="subtitle">Explainable Diabetic Retinopathy Diagnostic Workstation</div>
+    </div>
+  </div>
+
+  <div class="header-telemetry">
+    <div class="telemetry-pill">
+      <span class="pulse-dot"></span>
+      <span>Inference Engine: <b>Active</b></span>
+    </div>
+    <div class="telemetry-pill">
+      <span>Field Camp: <b>#402 Vidarbha Mobile</b></span>
+    </div>
+  </div>
+
+  <div class="header-actions">
+    <button class="btn btn-secondary" onclick="openReport()" id="btn-header-report" disabled>
+      <span>📄 Referral Slip</span>
+    </button>
+    <button class="theme-toggle-btn" id="theme-toggle" title="Toggle Light / Dark Mode">
+      🌙
+    </button>
+  </div>
+</header>
+
+<!-- NAVIGATION BAR -->
+<nav class="app-nav">
+  <div class="nav-tabs">
+    <div class="nav-tab active" data-tab="screen">
+      <span>🔬 Diagnostic Cockpit</span>
+    </div>
+    <div class="nav-tab" data-tab="dash">
+      <span>📊 Camp Analytics &amp; Audit</span>
+    </div>
+  </div>
+  <div class="nav-meta">
+    MATLAB · Simulink Triage Pipeline Ready
+  </div>
+</nav>
+
+<!-- MAIN WORKSPACE -->
+<main class="app-workspace">
+
+  <!-- VIEW 1: DIAGNOSTIC COCKPIT -->
+  <div id="tab-screen">
+    <div class="screen-layout">
+
+      <!-- LEFT COLUMN: PATIENT QUEUE -->
+      <aside class="col-queue">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📋 Screening Queue</span>
+            <span class="badge" id="queue-count" style="font-size:12px; color:var(--text-secondary); font-family:var(--font-mono)">15 Cases</span>
+          </div>
+          <div class="card-body">
+            
+            <!-- SEARCH BAR -->
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="patient-search" placeholder="Search patient ID or name...">
+            </div>
+
+            <!-- FILTER CHIPS -->
+            <div class="filter-chips">
+              <span class="f-chip active" data-filter="all">All</span>
+              <span class="f-chip" data-filter="gradable">Gradable</span>
+              <span class="f-chip" data-filter="borderline">Borderline</span>
+              <span class="f-chip" data-filter="poor">Recapture</span>
+              <span class="f-chip" data-filter="referable">Referable</span>
+            </div>
+
+            <!-- DRAG & DROP UPLOAD ZONE -->
+            <div class="upload-zone" id="upload-zone">
+              <div class="up-icon">📷</div>
+              <div class="up-title">Upload Real Fundus Photo</div>
+              <div class="up-desc">Drop PNG / JPEG or click to browse</div>
+              <input type="file" id="file-input" accept="image/*" class="hidden">
+            </div>
+
+            <!-- PATIENT SCROLL LIST -->
+            <div class="patient-list" id="patient-list">
+              <!-- Dynamically populated -->
+            </div>
+
+          </div>
+        </div>
+      </aside>
+
+      <!-- CENTER COLUMN: DIAGNOSTIC VIEWPORT & PIPELINE HUD -->
+      <section class="col-viewport">
+
+        <!-- ACTIVE PATIENT BANNER -->
+        <div class="viewport-header" id="active-banner">
+          <div class="active-patient-meta">
+            <h2 id="patient-title">Select a Patient to Screen</h2>
+            <div class="details">
+              <span id="p-id-tag">ID: --</span>
+              <span id="p-camp-tag">Camp: #402 Vidarbha</span>
+              <span id="p-time-tag">Time: --</span>
+            </div>
+          </div>
+          <div id="quality-badge-wrap">
+            <span class="badge" style="background:var(--bg-surface-subtle); color:var(--text-muted); padding:6px 14px; border-radius:8px; font-size:12px">Awaiting Scan</span>
+          </div>
+        </div>
+
+        <!-- PIPELINE HUD STATUS -->
+        <div class="pipeline-hud">
+          <div class="pipeline-step" id="step-0">
+            <div class="step-num">1</div>
+            <div class="step-title">Quality Gate</div>
+          </div>
+          <div class="pipeline-step" id="step-1">
+            <div class="step-num">2</div>
+            <div class="step-title">Enhancement</div>
+          </div>
+          <div class="pipeline-step" id="step-2">
+            <div class="step-num">3</div>
+            <div class="step-title">Lesion Saliency</div>
+          </div>
+          <div class="pipeline-step" id="step-3">
+            <div class="step-num">4</div>
+            <div class="step-title">ICDR Grading</div>
+          </div>
+          <div class="pipeline-step" id="step-4">
+            <div class="step-num">5</div>
+            <div class="step-title">Report &amp; Triage</div>
+          </div>
+        </div>
+
+        <!-- INTERACTIVE CANVAS -->
+        <div class="viewport-container" id="viewport-container">
+          
+          <!-- VIEWPORT TOOLBAR -->
+          <div class="viewport-toolbar">
+            <div class="v-tool-group" id="layer-toggles">
+              <button class="v-btn active" data-mode="explanation">Evidence Overlay</button>
+              <button class="v-btn" data-mode="original">Original Fundus</button>
+              <button class="v-btn" data-mode="enhanced" id="btn-mode-enhanced" style="display:none">CLAHE Enhanced</button>
+              <button class="v-btn" data-mode="compare" id="btn-mode-compare">Split Compare</button>
+            </div>
+
+            <div class="v-tool-group zoom-controls">
+              <button class="zoom-btn" id="zoom-in" title="Zoom In">+</button>
+              <button class="zoom-btn" id="zoom-out" title="Zoom Out">−</button>
+              <button class="zoom-btn" id="zoom-reset" title="Reset Zoom">⟲</button>
+            </div>
+          </div>
+
+          <!-- PRIMARY STAGE -->
+          <div class="canvas-stage" id="canvas-stage">
+            <div class="canvas-image-wrapper" id="image-wrapper">
+              <img id="primary-fundus-img" class="canvas-image" src="" alt="Fundus Evidence Map" style="display:none">
+            </div>
+
+            <!-- SPLIT COMPARATOR -->
+            <div class="split-container" id="split-container">
+              <img id="split-before" src="" alt="Before">
+              <img id="split-after" class="split-overlay-image" src="" alt="After">
+              <div class="split-divider" id="split-divider">
+                <div class="split-handle">↔</div>
+              </div>
+            </div>
+
+            <!-- EMPTY PLACEHOLDER -->
+            <div id="viewport-placeholder" style="text-align:center; padding:40px 20px">
+              <div style="font-size:48px; margin-bottom:12px; opacity:0.3">👁️</div>
+              <h3 style="color:var(--text-secondary); font-size:16px">Diagnostic Viewport Ready</h3>
+              <p style="color:var(--text-muted); font-size:13px; max-width:380px; margin:6px auto 0">
+                Select an anonymised sample from the library or upload a camera fundus photo to trigger automated screening.
+              </p>
+            </div>
+          </div>
+
+          <!-- VIEWPORT FOOTER & LESION LEGEND -->
+          <div class="viewport-footer">
+            <div class="lesion-badges" id="lesion-badges">
+              <span class="lesion-tag"><span class="l-dot" style="background:#ff3c3c"></span>Microaneurysms</span>
+              <span class="lesion-tag"><span class="l-dot" style="background:#b21428"></span>Haemorrhages</span>
+              <span class="lesion-tag"><span class="l-dot" style="background:#ffcd3c"></span>Hard Exudates</span>
+              <span class="lesion-tag"><span class="l-dot" style="background:#a03cff"></span>Neovascularisation</span>
+            </div>
+            <div id="latency-indicator" style="font-family:var(--font-mono)">
+              Latency: -- ms
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- RIGHT COLUMN: CLINICAL INTELLIGENCE & TRIAGE -->
+      <aside class="col-intelligence">
+
+        <!-- DIAGNOSTIC VERDICT -->
+        <div class="verdict-card" id="verdict-card">
+          <div class="verdict-title">ICDR Severity Classification</div>
+          <div class="verdict-grade-row">
+            <div class="verdict-grade-text" id="v-grade-label">--</div>
+            <div class="grade-chip" id="v-grade-chip">L--</div>
+          </div>
+          
+          <div class="triage-alert non-refer" id="triage-alert-box">
+            <span id="triage-icon">✓</span>
+            <span id="triage-text">Awaiting diagnostic screening</span>
+          </div>
+
+          <div class="confidence-box">
+            <div class="conf-header">
+              <span style="color:var(--text-secondary)">Calibrated AI Confidence</span>
+              <span id="conf-val" style="font-family:var(--font-mono); font-weight:700">0%</span>
+            </div>
+            <div class="conf-bar-bg">
+              <div class="conf-bar-fill" id="conf-bar" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STAGE 1 QUALITY SCORECARD -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🛡️ Retinal Capture Quality Gate</span>
+            <span id="quality-overall-score" style="font-family:var(--font-mono); font-weight:700; color:var(--accent-cyan)">--/100</span>
+          </div>
+          <div class="card-body">
+            <div id="quality-metrics-list">
+              <div class="quality-metric-row"><span class="q-label">Focus / Blur</span><div class="q-bar-bg"><div class="q-bar-fill" style="width:0%"></div></div><span class="q-val">--</span></div>
+              <div class="quality-metric-row"><span class="q-label">Illumination</span><div class="q-bar-bg"><div class="q-bar-fill" style="width:0%"></div></div><span class="q-val">--</span></div>
+              <div class="quality-metric-row"><span class="q-label">Contrast</span><div class="q-bar-bg"><div class="q-bar-fill" style="width:0%"></div></div><span class="q-val">--</span></div>
+              <div class="quality-metric-row"><span class="q-label">Field of View</span><div class="q-bar-bg"><div class="q-bar-fill" style="width:0%"></div></div><span class="q-val">--</span></div>
+              <div class="quality-metric-row"><span class="q-label">Artifacts</span><div class="q-bar-bg"><div class="q-bar-fill" style="width:0%"></div></div><span class="q-val">--</span></div>
+            </div>
+
+            <div id="enhancement-note" style="margin-top:10px; font-size:11.5px; color:var(--text-muted); display:none">
+              ⚡ <b>Auto-Enhanced:</b> Quality raised from <span id="enh-pre">--</span> to <span id="enh-post">--</span> via CLAHE filter.
+            </div>
+          </div>
+        </div>
+
+        <!-- BIOMARKER DETECTIONS -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🔍 Detected Retinal Biomarkers</span>
+            <span style="font-size:11px; color:var(--text-muted)">Lesion Counts</span>
+          </div>
+          <div class="card-body">
+            <div class="biomarker-grid">
+              <div class="bio-card">
+                <span class="bio-name">Microaneurysms</span>
+                <span class="bio-count" id="count-ma">0</span>
+              </div>
+              <div class="bio-card">
+                <span class="bio-name">Haemorrhages</span>
+                <span class="bio-count" id="count-hem">0</span>
+              </div>
+              <div class="bio-card">
+                <span class="bio-name">Hard Exudates</span>
+                <span class="bio-count" id="count-ex">0</span>
+              </div>
+              <div class="bio-card">
+                <span class="bio-name">Neovasc. (NV)</span>
+                <span class="bio-count" id="count-nv">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CLINICAL ACTION BUTTONS -->
+        <div class="action-row">
+          <button class="btn btn-primary" onclick="openReport()" id="btn-view-report" disabled>
+            <span>📋 Generate Clinical Referral Slip</span>
+          </button>
+          <button class="btn btn-secondary" onclick="exportAuditJSON()" id="btn-export-json" disabled>
+            <span>💾 Export Telemedicine JSON</span>
+          </button>
+        </div>
+
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- VIEW 2: CAMP ANALYTICS & AUDIT -->
+  <div id="tab-dash" class="hidden">
+    
+    <div class="kpi-row" id="kpi-container">
+      <div class="kpi-tile">
+        <div class="kpi-num" id="kpi-total">0</div>
+        <div class="kpi-label">Total Screenings Performed</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-num" id="kpi-referable" style="color:var(--status-bad)">0%</div>
+        <div class="kpi-label">Referral Rate (≥ Moderate NPDR)</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-num" id="kpi-quality" style="color:var(--accent-cyan)">0</div>
+        <div class="kpi-label">Mean Retinal Quality Score</div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-num" id="kpi-latency" style="color:var(--accent-blue)">0 ms</div>
+        <div class="kpi-label">Average Inference Latency</div>
+      </div>
+    </div>
+
+    <!-- AUDIT TRAIL TABLE -->
+    <div class="audit-table-wrap">
+      <div class="card-header">
+        <span class="card-title">📜 Mobile Camp Screening Audit Trail</span>
+        <button class="btn btn-secondary" style="padding:4px 10px; font-size:12px" onclick="downloadCSV()">
+          📥 Export CSV
+        </button>
+      </div>
+      <table class="audit-table" id="audit-table">
+        <thead>
+          <tr>
+            <th>Case ID</th>
+            <th>Patient Name</th>
+            <th>Quality Score</th>
+            <th>ICDR Severity</th>
+            <th>Triage Action</th>
+            <th>Confidence</th>
+            <th>Latency</th>
+          </tr>
+        </thead>
+        <tbody id="audit-tbody">
+          <tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:30px">No patients screened in this session yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- CLINICAL REPORT MODAL -->
+<div class="modal-backdrop" id="report-modal">
+  <div class="report-slip">
+    
+    <div class="slip-header">
+      <div>
+        <h2 style="font-size:20px; font-weight:800; margin:0">NETRAXAI · CLINICAL RETINAL SCREENING REPORT</h2>
+        <div style="font-size:12px; opacity:0.85; margin-top:2px">Rural Tele-Ophthalmology Network · SIH26038 / MathWorks</div>
+      </div>
+      <div class="no-print" style="display:flex; gap:8px">
+        <button class="btn btn-secondary" style="background:#ffffff; color:#0f172a" onclick="window.print()">🖨️ Print Slip</button>
+        <button class="btn btn-secondary" style="background:rgba(255,255,255,0.2); color:#ffffff; border-color:transparent" onclick="closeReport()">✕ Close</button>
+      </div>
+    </div>
+
+    <div class="slip-body">
+      
+      <div class="slip-grid-2">
+        <div class="slip-box">
+          <div class="slip-box-title">Patient Identification</div>
+          <div style="font-size:16px; font-weight:700" id="rpt-patient-name">--</div>
+          <div style="font-size:12px; color:#64748b; font-family:var(--font-mono); margin-top:2px" id="rpt-patient-id">ID: --</div>
+          <div style="font-size:12px; color:#64748b; margin-top:2px">Facility: Mobile Camp Unit #402</div>
+        </div>
+        <div class="slip-box">
+          <div class="slip-box-title">Automated AI Triage Assessment</div>
+          <div style="font-size:16px; font-weight:700" id="rpt-grade-label">--</div>
+          <div style="font-size:12px; margin-top:4px" id="rpt-triage-desc">--</div>
+        </div>
+      </div>
+
+      <div class="slip-images">
+        <div class="slip-img-card">
+          <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:6px">FUNDUS PHOTOGRAPH</div>
+          <img id="rpt-img-orig" src="" alt="Fundus">
+        </div>
+        <div class="slip-img-card">
+          <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:6px">EXPLAINABILITY &amp; LESION OVERLAY</div>
+          <img id="rpt-img-expl" src="" alt="Evidence">
+        </div>
+      </div>
+
+      <div class="slip-box" style="margin-top:16px">
+        <div class="slip-box-title">Biomarker Evidence &amp; Clinical Recommendation</div>
+        <pre id="rpt-evidence-text" style="font-family:var(--font-mono); font-size:12px; white-space:pre-wrap; color:#334155; margin:0"></pre>
+      </div>
+
+      <div class="slip-footer">
+        <div style="font-size:11px; color:#64748b; max-width:380px">
+          ⚠ <b>Clinical Disclaimer:</b> NetraXAI is an AI screening assistive tool. Definitive diagnosis and surgical interventions must be evaluated by a certified retinal specialist.
+        </div>
+        <div class="doctor-sign">
+          Examining Medical Officer / CHW<br>
+          <b>Signature &amp; Camp Stamp</b>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- APPLICATION JAVASCRIPT -->
+<script>
+const GRADE_LABELS = [
+  "No Diabetic Retinopathy",
+  "Mild Non-Proliferative DR",
+  "Moderate Non-Proliferative DR",
+  "Severe Non-Proliferative DR",
+  "Proliferative DR"
+];
+
+const GRADE_COLORS = ["#10b981", "#06b6d4", "#f59e0b", "#f97316", "#ec4899"];
+
+let state = {
+  samples: [],
+  filteredSamples: [],
+  current: null,
+  results: [],
+  busy: false,
+  zoom: 1,
+  panX: 0,
+  panY: 0,
+  activeMode: "explanation",
+  activeFilter: "all",
+  theme: "dark"
+};
+
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function showToast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.style.display = "block";
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.display = "none"; }, 3200);
+}
+
+// API CLIENT
+async function fetchSamples() {
+  const res = await fetch("/api/samples");
+  if (!res.ok) throw new Error("Failed to load sample library");
+  const data = await res.json();
+  return data.samples;
+}
+
+async function analyzeScan(payload) {
+  const res = await fetch("/api/analyze", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Analysis failed");
+  }
+  return res.json();
+}
+
+// THEME TOGGLE
+$("#theme-toggle").addEventListener("click", () => {
+  const current = document.documentElement.getAttribute("data-theme");
+  const next = current === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  $("#theme-toggle").textContent = next === "dark" ? "🌙" : "☀️";
+  state.theme = next;
+});
+
+// NAVIGATION TABS
+$$(".nav-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    $$(".nav-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    const target = tab.dataset.tab;
+    $("#tab-screen").classList.toggle("hidden", target !== "screen");
+    $("#tab-dash").classList.toggle("hidden", target !== "dash");
+    if (target === "dash") renderDashboard();
+  });
+});
+
+// PIPELINE HUD STEPS
+function updatePipelineHUD(activeStep) {
+  for (let i = 0; i < 5; i++) {
+    const el = $(`#step-${i}`);
+    if (activeStep === -1) {
+      el.className = "pipeline-step";
+    } else if (i < activeStep) {
+      el.className = "pipeline-step done";
+    } else if (i === activeStep) {
+      el.className = "pipeline-step running";
+    } else {
+      el.className = "pipeline-step";
+    }
+  }
+}
+
+// RENDER PATIENT LIST
+function renderPatientList() {
+  const container = $("#patient-list");
+  const filtered = state.samples.filter(s => {
+    // filter chip
+    if (state.activeFilter === "gradable" && s.quality !== 0) return false;
+    if (state.activeFilter === "borderline" && s.quality !== 1) return false;
+    if (state.activeFilter === "poor" && s.quality !== 2) return false;
+    if (state.activeFilter === "referable" && s.grade < 2) return false;
+    // search
+    const query = $("#patient-search").value.toLowerCase().trim();
+    if (query) {
+      return s.name.toLowerCase().includes(query) || s.patient_id.toLowerCase().includes(query);
+    }
+    return true;
+  });
+
+  $("#queue-count").textContent = `${filtered.length} of ${state.samples.length} Cases`;
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:12.5px">No matching cases found</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(s => {
+    const isActive = state.current && state.current.sample_id === s.id ? "active" : "";
+    return `
+      <div class="patient-item ${isActive}" data-id="${s.id}">
+        <img class="patient-thumb" src="${s.thumb}" alt="${esc(s.name)}" loading="lazy">
+        <div class="patient-info">
+          <div class="patient-name">${esc(s.name)}</div>
+          <div class="patient-sub">
+            <span>${esc(s.patient_id)}</span>
+            <span>·</span>
+            <span>${esc(s.quality_label)}</span>
+          </div>
+        </div>
+        <div class="grade-chip g-${s.grade}">L${s.grade}</div>
+      </div>
+    `;
+  }).join("");
+
+  // Bind click
+  $$(".patient-item").forEach(item => {
+    item.addEventListener("click", () => {
+      const sid = item.dataset.id;
+      executeScreening({ source: "sample", id: sid });
+    });
+  });
+}
+
+// FILTER CHIP HANDLERS
+$$(".f-chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    $$(".f-chip").forEach(c => c.classList.remove("active"));
+    chip.classList.add("active");
+    state.activeFilter = chip.dataset.filter;
+    renderPatientList();
+  });
+});
+
+$("#patient-search").addEventListener("input", renderPatientList);
+
+// RUN SCREENING WORKFLOW
+async function executeScreening(payload) {
+  if (state.busy) {
+    showToast("Analysis already running...");
+    return;
+  }
+  state.busy = true;
+  updatePipelineHUD(0);
+
+  // Set loading placeholder in viewport
+  $("#viewport-placeholder").style.display = "block";
+  $("#viewport-placeholder").innerHTML = `
+    <div class="spinner-ring"></div>
+    <h3 style="color:var(--accent-cyan); font-size:15px">Running NetraXAI Diagnostic Pipeline</h3>
+    <p style="color:var(--text-secondary); font-size:12.5px; margin-top:4px">Assessing capture quality, detecting lesions &amp; calibrating ICDR grade...</p>
+  `;
+  $("#primary-fundus-img").style.display = "none";
+  $("#split-container").style.display = "none";
+
+  try {
+    // Step simulation
+    setTimeout(() => updatePipelineHUD(1), 200);
+    setTimeout(() => updatePipelineHUD(2), 400);
+    setTimeout(() => updatePipelineHUD(3), 600);
+
+    const result = await analyzeScan(payload);
+    
+    updatePipelineHUD(5); // all completed
+    state.current = result;
+    state.results.unshift(result);
+    if (state.results.length > 50) state.results.pop();
+
+    renderDiagnosticResult(result);
+    renderPatientList();
+    showToast(`Screening complete for ${result.name}`);
+  } catch (err) {
+    updatePipelineHUD(-1);
+    $("#viewport-placeholder").innerHTML = `
+      <div style="color:var(--status-bad); font-size:32px; margin-bottom:8px">⚠️</div>
+      <h3 style="color:var(--status-bad); font-size:15px">Screening Pipeline Error</h3>
+      <p style="color:var(--text-secondary); font-size:12px">${esc(err.message)}</p>
+    `;
+    showToast(`Error: ${err.message}`);
+  } finally {
+    state.busy = false;
+  }
+}
+
+// RENDER RESULT IN VIEWPORT & INTELLIGENCE RAIL
+function renderDiagnosticResult(res) {
+  const g = res.grade;
+  const q = res.quality;
+  const lc = res.lesions.counts;
+
+  // Active Patient Banner
+  $("#patient-title").textContent = res.name;
+  $("#p-id-tag").textContent = `ID: ${res.patient_id}`;
+  $("#p-time-tag").textContent = `Latency: ${res.latency_ms}ms`;
+
+  const qBadgeClass = q.status === "accept" ? "status-ok" : q.status === "enhance" ? "status-warn" : "status-bad";
+  $("#quality-badge-wrap").innerHTML = `
+    <span class="badge" style="background:var(--${qBadgeClass}-bg); color:var(--${qBadgeClass}); border:1px solid var(--${qBadgeClass}-border); padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700">
+      ${q.status.toUpperCase()} · ${esc(q.status_text)}
+    </span>
+  `;
+
+  // Verdict Card
+  $("#v-grade-label").textContent = g.label;
+  $("#v-grade-label").style.color = GRADE_COLORS[g.level];
+  $("#v-grade-chip").textContent = `Level ${g.level}`;
+  $("#v-grade-chip").className = `grade-chip g-${g.level}`;
+
+  const alertBox = $("#triage-alert-box");
+  const verdictCard = $("#verdict-card");
+  if (g.referable) {
+    verdictCard.classList.add("referable");
+    alertBox.className = "triage-alert refer";
+    alertBox.innerHTML = `<span>🚨</span><span>REFERABLE — Flagged for Specialist Consultation</span>`;
+  } else {
+    verdictCard.classList.remove("referable");
+    alertBox.className = "triage-alert non-refer";
+    alertBox.innerHTML = `<span>✓</span><span>NON-REFERABLE — Routine Community Follow-up</span>`;
+  }
+
+  // Confidence
+  const conf = g.confidence.overall;
+  $("#conf-val").textContent = `${conf}%`;
+  $("#conf-bar").style.width = `${conf}%`;
+
+  // Quality Breakdown
+  $("#quality-overall-score").textContent = `${q.score}/100`;
+  const metricsHtml = Object.entries(q.metrics).map(([k, val]) => `
+    <div class="quality-metric-row">
+      <span class="q-label">${k}</span>
+      <div class="q-bar-bg"><div class="q-bar-fill" style="width:${Math.max(0, Math.min(100, val))}%"></div></div>
+      <span class="q-val">${val}</span>
+    </div>
+  `).join("");
+  $("#quality-metrics-list").innerHTML = metricsHtml;
+
+  if (q.pre_gate != null) {
+    $("#enhancement-note").style.display = "block";
+    $("#enh-pre").textContent = `${q.pre_gate}`;
+    $("#enh-post").textContent = `${q.score}`;
+  } else {
+    $("#enhancement-note").style.display = "none";
+  }
+
+  // Biomarkers
+  $("#count-ma").textContent = lc.microaneurysms;
+  $("#count-hem").textContent = lc.haemorrhages;
+  $("#count-ex").textContent = lc.exudates;
+  $("#count-nv").textContent = lc.neovascularisation;
+
+  // Viewport image setup
+  const imgEl = $("#primary-fundus-img");
+  imgEl.src = res.images.explanation;
+  imgEl.style.display = "block";
+  $("#viewport-placeholder").style.display = "none";
+  $("#split-container").style.display = "none";
+
+  // Reset zoom & pan
+  state.zoom = 1;
+  state.panX = 0;
+  state.panY = 0;
+  applyTransform();
+
+  // Mode toggles
+  const btnEnh = $("#btn-mode-enhanced");
+  if (res.images.enhanced) {
+    btnEnh.style.display = "inline-block";
+  } else {
+    btnEnh.style.display = "none";
+  }
+
+  // Setup split comparator images
+  $("#split-before").src = res.images.original;
+  $("#split-after").src = res.images.explanation;
+
+  // Layer toggles reset
+  $$("#layer-toggles .v-btn").forEach(b => b.classList.remove("active"));
+  $$("#layer-toggles .v-btn")[0].classList.add("active");
+  state.activeMode = "explanation";
+
+  // Latency footnote
+  $("#latency-indicator").textContent = `Latency: ${res.latency_ms} ms · OpenCV/Pillow Engine`;
+
+  // Enable action buttons
+  $("#btn-header-report").disabled = false;
+  $("#btn-view-report").disabled = false;
+  $("#btn-export-json").disabled = false;
+}
+
+// LAYER SWITCHING & SPLIT COMPARATOR
+$$("#layer-toggles .v-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    if (!state.current) return;
+    $$("#layer-toggles .v-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    const mode = btn.dataset.mode;
+    state.activeMode = mode;
+
+    const img = $("#primary-fundus-img");
+    const split = $("#split-container");
+
+    if (mode === "compare") {
+      img.style.display = "none";
+      split.style.display = "block";
+    } else {
+      split.style.display = "none";
+      img.style.display = "block";
+      if (mode === "explanation") img.src = state.current.images.explanation;
+      else if (mode === "original") img.src = state.current.images.original;
+      else if (mode === "enhanced" && state.current.images.enhanced) img.src = state.current.images.enhanced;
+    }
+  });
+});
+
+// SPLIT COMPARATOR DRAGGING
+const splitDivider = $("#split-divider");
+const splitAfter = $("#split-after");
+const splitBox = $("#split-container");
+let isDraggingSplit = false;
+
+splitBox.addEventListener("mousedown", () => { isDraggingSplit = true; });
+window.addEventListener("mouseup", () => { isDraggingSplit = false; });
+window.addEventListener("mousemove", (e) => {
+  if (!isDraggingSplit) return;
+  const rect = splitBox.getBoundingClientRect();
+  let x = e.clientX - rect.left;
+  x = Math.max(0, Math.min(rect.width, x));
+  const pct = (x / rect.width) * 100;
+  splitDivider.style.left = `${pct}%`;
+  splitAfter.style.clipPath = `polygon(0 0, ${pct}% 0, ${pct}% 100%, 0 100%)`;
+});
+
+// ZOOM & PAN CONTROLS
+function applyTransform() {
+  const wrapper = $("#image-wrapper");
+  wrapper.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
+}
+
+$("#zoom-in").addEventListener("click", () => {
+  state.zoom = Math.min(3.5, state.zoom + 0.25);
+  applyTransform();
+});
+$("#zoom-out").addEventListener("click", () => {
+  state.zoom = Math.max(0.75, state.zoom - 0.25);
+  applyTransform();
+});
+$("#zoom-reset").addEventListener("click", () => {
+  state.zoom = 1;
+  state.panX = 0;
+  state.panY = 0;
+  applyTransform();
+});
+
+// PAN DRAGGING
+const stage = $("#canvas-stage");
+let isPanning = false, startX = 0, startY = 0;
+
+stage.addEventListener("mousedown", (e) => {
+  if (state.activeMode === "compare") return;
+  isPanning = true;
+  startX = e.clientX - state.panX;
+  startY = e.clientY - state.panY;
+});
+window.addEventListener("mouseup", () => { isPanning = false; });
+window.addEventListener("mousemove", (e) => {
+  if (!isPanning) return;
+  state.panX = e.clientX - startX;
+  state.panY = e.clientY - startY;
+  applyTransform();
+});
+
+// FILE UPLOAD WIRING
+const dropZone = $("#upload-zone");
+const fileInput = $("#file-input");
+
+dropZone.addEventListener("click", () => fileInput.click());
+
+dropZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  dropZone.classList.add("dragover");
+});
+dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
+dropZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropZone.classList.remove("dragover");
+  const file = e.dataTransfer.files[0];
+  if (file) handleUploadFile(file);
+});
+
+fileInput.addEventListener("change", () => {
+  const file = fileInput.files[0];
+  if (file) handleUploadFile(file);
+});
+
+function handleUploadFile(file) {
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const randomId = "UPL-" + Math.floor(1000 + Math.random() * 9000);
+    const fileName = file.name.replace(/\.[^/.]+$/, "");
+    executeScreening({
+      source: "upload",
+      image_b64: reader.result,
+      patient_id: randomId,
+      name: fileName
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+// CLINICAL REPORT MODAL
+function openReport() {
+  if (!state.current) return;
+  const cur = state.current;
+  $("#rpt-patient-name").textContent = cur.name;
+  $("#rpt-patient-id").textContent = `Patient ID: ${cur.patient_id}`;
+  $("#rpt-grade-label").textContent = `ICDR Level ${cur.grade.level}: ${cur.grade.label}`;
+  $("#rpt-grade-label").style.color = GRADE_COLORS[cur.grade.level];
+  
+  const triageDesc = cur.grade.referable
+    ? "URGENT REFERRAL REQUIRED: Evidence of significant DR lesions. Refer to ophthalmologist within 48-72 hours."
+    : "NON-REFERABLE: Early or no DR observed. Re-screen at community mobile camp in 12 months.";
+  $("#rpt-triage-desc").textContent = triageDesc;
+
+  $("#rpt-img-orig").src = cur.images.original;
+  $("#rpt-img-expl").src = cur.images.explanation;
+  $("#rpt-evidence-text").textContent = cur.report.text;
+
+  $("#report-modal").classList.add("open");
+}
+
+function closeReport() {
+  $("#report-modal").classList.remove("open");
+}
+
+// EXPORT AUDIT JSON
+function exportAuditJSON() {
+  if (!state.current) return;
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.current, null, 2));
+  const dl = document.createElement("a");
+  dl.setAttribute("href", dataStr);
+  dl.setAttribute("download", `NetraXAI_${state.current.patient_id}_Screening.json`);
+  dl.click();
+}
+
+// TAB 2: AUDIT & DASHBOARD
+function renderDashboard() {
+  const rs = state.results;
+  const n = rs.length;
+  const referableCount = rs.filter(r => r.grade.referable).length;
+  const refPct = n > 0 ? Math.round((referableCount / n) * 100) : 0;
+  const avgQ = n > 0 ? Math.round(rs.reduce((a, b) => a + b.quality.score, 0) / n) : 0;
+  const avgLat = n > 0 ? Math.round(rs.reduce((a, b) => a + b.latency_ms, 0) / n) : 0;
+
+  $("#kpi-total").textContent = n;
+  $("#kpi-referable").textContent = `${refPct}% (${referableCount})`;
+  $("#kpi-quality").textContent = `${avgQ}/100`;
+  $("#kpi-latency").textContent = `${avgLat} ms`;
+
+  const tbody = $("#audit-tbody");
+  if (n === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:30px">No patients screened in this session yet.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rs.map(r => `
+    <tr>
+      <td style="font-family:var(--font-mono); font-weight:600">${esc(r.patient_id)}</td>
+      <td><b>${esc(r.name)}</b></td>
+      <td><span class="badge" style="background:var(--bg-surface-elevated); padding:3px 8px; border-radius:4px; font-family:var(--font-mono)">${r.quality.score}</span></td>
+      <td style="color:${GRADE_COLORS[r.grade.level]}; font-weight:700">L${r.grade.level} · ${esc(r.grade.label)}</td>
+      <td>${r.grade.referable ? '<span style="color:var(--status-bad); font-weight:700">🚨 Refer to Specialist</span>' : '<span style="color:var(--status-ok)">✓ Routine Follow-up</span>'}</td>
+      <td style="font-family:var(--font-mono)">${r.grade.confidence.overall}%</td>
+      <td style="font-family:var(--font-mono); color:var(--text-muted)">${r.latency_ms} ms</td>
+    </tr>
+  `).join("");
+}
+
+function downloadCSV() {
+  const rs = state.results;
+  if (!rs.length) {
+    showToast("No screening data to export");
+    return;
+  }
+  const headers = ["Patient ID", "Name", "Quality Score", "Quality Status", "ICDR Level", "ICDR Grade", "Referable", "Confidence %", "Latency ms"];
+  const rows = rs.map(r => [
+    r.patient_id,
+    `"${r.name}"`,
+    r.quality.score,
+    r.quality.status,
+    r.grade.level,
+    `"${r.grade.label}"`,
+    r.grade.referable ? "YES" : "NO",
+    r.grade.confidence.overall,
+    r.latency_ms
+  ]);
+  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `NetraXAI_Screening_Audit_${Date.now()}.csv`);
+  link.click();
+}
+
+// INITIALIZATION
+async function initApp() {
+  try {
+    state.samples = await fetchSamples();
+    renderPatientList();
+    // Auto-select first sample to showcase workstation immediately!
+    if (state.samples.length > 0) {
+      executeScreening({ source: "sample", id: state.samples[6].id }); // L2 sample (Moderate NPDR) as demo hero!
+    }
+  } catch (err) {
+    showToast(`Could not connect to NetraXAI server: ${err.message}`);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", initApp);
+</script>
+
+</body>
+</html>
