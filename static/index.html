@@ -552,6 +552,29 @@
   .g-4 { background: rgba(236, 72, 153, 0.15); color: var(--grade-4); border: 1px solid rgba(236, 72, 153, 0.3); }
   .g-invalid { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
 
+  /* STORED SCREENING REPORTS */
+  .stored-report-item {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stored-report-item:hover {
+    border-color: var(--accent-cyan);
+    background: var(--bg-surface-subtle);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+  .stored-report-item.active {
+    border-color: var(--accent-cyan);
+    background: var(--accent-cyan-subtle);
+  }
+
   /* CENTER COLUMN: DIAGNOSTIC VIEWPORT & PIPELINE HUD */
   .viewport-header {
     display: flex;
@@ -2029,6 +2052,25 @@
 
           </div>
         </div>
+
+        <!-- STORED SCREENING REPORTS CARD -->
+        <div class="card" style="margin-top:14px">
+          <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px">
+            <div style="display:flex; align-items:center; gap:6px">
+              <span class="card-title" style="font-size:13px">📜 Stored Reports</span>
+              <span class="badge" id="stored-reports-count" style="font-size:11px; font-family:var(--font-mono); background:var(--bg-surface-elevated); color:var(--accent-cyan); padding:1px 6px">0</span>
+            </div>
+            <button class="btn btn-secondary" style="padding:3px 8px; font-size:11px; color:#ef4444; border-color:rgba(239,68,68,0.35); background:rgba(239,68,68,0.08)" onclick="clearAllData()" title="Clear all stored screening reports">
+              🗑️ Clear Data
+            </button>
+          </div>
+          <div class="card-body" style="padding:10px">
+            <div id="stored-reports-list" style="max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:8px">
+              <div style="font-size:12px; color:var(--text-muted); text-align:center; padding:16px">No screening reports saved yet.</div>
+            </div>
+          </div>
+        </div>
+
       </aside>
 
       <!-- CENTER COLUMN: DIAGNOSTIC VIEWPORT & PIPELINE HUD -->
@@ -2256,9 +2298,14 @@
     <div class="audit-table-wrap">
       <div class="card-header">
         <span class="card-title">📜 Mobile Camp Screening Audit Trail</span>
-        <button class="btn btn-secondary" style="padding:4px 10px; font-size:12px" onclick="downloadCSV()">
-          📥 Export CSV
-        </button>
+        <div style="display:flex; gap:8px">
+          <button class="btn btn-secondary" style="padding:4px 10px; font-size:12px; color:#ef4444; border-color:rgba(239,68,68,0.35); background:rgba(239,68,68,0.08)" onclick="clearAllData()">
+            🗑️ Clear Data
+          </button>
+          <button class="btn btn-secondary" style="padding:4px 10px; font-size:12px" onclick="downloadCSV()">
+            📥 Export CSV
+          </button>
+        </div>
       </div>
       <table class="audit-table" id="audit-table">
         <thead>
@@ -2892,9 +2939,12 @@ async function executeScreening(payload) {
       if (tb2) tb2.textContent = "ANATOMY MISSING";
       if (tb3) tb3.textContent = "OOD DETECTED";
 
+      result.timestamp = Date.now();
       state.current = result;
       state.results.unshift(result);
       if (state.results.length > 50) state.results.pop();
+      saveReportsToStorage();
+      renderStoredReportsList();
 
       await sleep(750);
       renderDiagnosticResult(result);
@@ -2936,9 +2986,12 @@ async function executeScreening(payload) {
     if (scannerHud) scannerHud.classList.add("resolving");
     await sleep(400);
 
+    result.timestamp = Date.now();
     state.current = result;
     state.results.unshift(result);
     if (state.results.length > 50) state.results.pop();
+    saveReportsToStorage();
+    renderStoredReportsList();
 
     renderDiagnosticResult(result);
     renderPatientList();
@@ -3456,9 +3509,127 @@ function downloadCSV() {
   link.click();
 }
 
+// LOCALSTORAGE PERSISTENCE & HISTORY
+const STORAGE_KEY = "netraxai_screening_history";
+
+function saveReportsToStorage() {
+  try {
+    let toSave = state.results.slice(0, 30);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    } catch (e) {
+      // Storage quota fallback: trim older image payloads
+      console.warn("Storage quota fallback, pruning older image records...", e);
+      toSave = state.results.slice(0, 15).map((r, idx) => {
+        if (idx > 1) {
+          return {
+            ...r,
+            images: {
+              original: r.images?.original || "",
+              explanation: r.images?.explanation || "",
+              enhanced: null
+            }
+          };
+        }
+        return r;
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    }
+  } catch (err) {
+    console.error("Could not persist reports to localStorage:", err);
+  }
+}
+
+function loadReportsFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error("Could not load reports from localStorage:", e);
+    return [];
+  }
+}
+
+function clearAllData() {
+  if (!confirm("Are you sure you want to clear all stored screening reports and audit trail data? This action cannot be undone.")) {
+    return;
+  }
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (e) {}
+  state.results = [];
+  renderStoredReportsList();
+  renderDashboard();
+  showToast("🗑️ All screening history & stored reports cleared.");
+}
+
+function renderStoredReportsList() {
+  const container = $("#stored-reports-list");
+  const countBadge = $("#stored-reports-count");
+  if (!container) return;
+
+  const list = state.results || [];
+  if (countBadge) countBadge.textContent = list.length;
+
+  if (list.length === 0) {
+    container.innerHTML = `<div style="font-size:12px; color:var(--text-muted); text-align:center; padding:18px">No screening reports saved yet.</div>`;
+    return;
+  }
+
+  container.innerHTML = list.map(r => {
+    const isInvalid = r.quality.status === "invalid" || r.quality.is_retina === false;
+    const gradeColor = isInvalid ? "#ef4444" : (GRADE_COLORS[r.grade?.level ?? 0] || "#94a3b8");
+    const gradeText = isInvalid ? "REJECTED (Non-Retina)" : `L${r.grade?.level ?? 0} · ${esc(r.grade?.label || 'Normal')}`;
+    const isActive = state.current && (state.current.patient_id === r.patient_id && state.current.timestamp === r.timestamp) ? "active" : "";
+
+    return `
+      <div class="stored-report-item ${isActive}" onclick="viewStoredReport('${esc(r.patient_id)}', ${r.timestamp || 0})" title="Click to review case evidence">
+        <div style="display:flex; justify-content:space-between; align-items:center">
+          <span style="font-weight:700; font-size:12px; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:145px">${esc(r.name)}</span>
+          <span style="font-family:var(--font-mono); font-size:10px; color:var(--text-muted)">${esc(r.patient_id)}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px">
+          <span style="font-size:11px; font-weight:700; color:${gradeColor}">${gradeText}</span>
+          ${!isInvalid ? `<button class="btn btn-secondary" style="padding:1px 6px; font-size:10px; height:20px; line-height:1" onclick="printStoredReport('${esc(r.patient_id)}', ${r.timestamp || 0}, event)" title="View Referral Report Slip">📄 Slip</button>` : ''}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function viewStoredReport(patientId, timestamp) {
+  const item = state.results.find(r => r.patient_id === patientId && (!timestamp || r.timestamp === timestamp))
+            || state.results.find(r => r.patient_id === patientId);
+  if (!item) return;
+
+  state.current = item;
+  renderDiagnosticResult(item);
+  renderStoredReportsList();
+  updatePipelineHUD(5, "done");
+  showToast(`Loaded stored report: ${item.name} (${item.patient_id})`);
+}
+
+function printStoredReport(patientId, timestamp, e) {
+  if (e) e.stopPropagation();
+  const item = state.results.find(r => r.patient_id === patientId && (!timestamp || r.timestamp === timestamp))
+            || state.results.find(r => r.patient_id === patientId);
+  if (!item) return;
+
+  state.current = item;
+  openReport();
+}
+
 // INITIALIZATION
 async function initApp() {
   try {
+    const savedReports = loadReportsFromStorage();
+    if (savedReports && savedReports.length > 0) {
+      state.results = savedReports;
+      renderStoredReportsList();
+      renderDashboard();
+    }
     state.samples = await fetchSamples();
     renderPatientList();
   } catch (err) {

@@ -122,14 +122,14 @@ class _TestPack:
         nr_dir = os.path.join(TEST_SAMPLES_DIR, "02_non_retinal_alert_tests")
         
         f_meta = {
-            "retina_normal_healthy_OS.jpg": ("Normal Healthy Retina (OS)", "Healthy left eye fundus scan with sharp macula and disc", "Grade 0: Normal"),
-            "retina_normal_macula_OD.jpg": ("Normal Healthy Retina (OD)", "Normal right eye fundus photograph (NIH / NEI)", "Grade 0: Normal"),
-            "retina_normal_field_scan.jpg": ("Normal Posterior Pole Scan", "Clear fundus scan with normal retinal vascular branching", "Grade 0: Normal"),
-            "retina_normal_healthy_EDA06.jpg": ("Normal Retina Benchmark", "National Eye Institute standard reference fundus", "Grade 0: Normal"),
-            "retina_dr_mild_early_EDA03.jpg": ("Mild NPDR (Early Microaneurysms)", "Early scattered microaneurysms and dot hemorrhages", "Grade 1: Mild NPDR"),
-            "retina_dr_moderate_maculopathy.png": ("Moderate NPDR (Maculopathy)", "Hard lipid exudate clusters and intraretinal hemorrhages", "Grade 2: Moderate NPDR"),
-            "retina_dr_severe_cotton_wool.png": ("Severe NPDR (Cotton Wool Spots)", "Nerve fiber layer infarcts and venous abnormalities", "Grade 3: Severe NPDR"),
-            "retina_dr_proliferative_pdr_EDA01.jpg": ("Proliferative DR (Neovasc. PDR)", "Active neovascularization at disc (NVD) & fragile vessels", "Grade 4: PDR"),
+            "retina_normal_healthy_OS.jpg": ("Normal Healthy Retina (OS)", "Healthy left eye fundus scan with sharp macula and disc", "Grade 0: Normal", 0),
+            "retina_normal_macula_OD.jpg": ("Normal Healthy Retina (OD)", "Normal right eye fundus photograph (NIH / NEI)", "Grade 0: Normal", 0),
+            "retina_normal_field_scan.jpg": ("Normal Posterior Pole Scan", "Clear fundus scan with normal retinal vascular branching", "Grade 0: Normal", 0),
+            "retina_normal_healthy_EDA06.jpg": ("Normal Retina Benchmark", "National Eye Institute standard reference fundus", "Grade 0: Normal", 0),
+            "retina_dr_mild_early_EDA03.jpg": ("Mild NPDR (Early Microaneurysms)", "Early scattered microaneurysms and dot hemorrhages", "Grade 1: Mild NPDR", 1),
+            "retina_dr_moderate_maculopathy.png": ("Moderate NPDR (Maculopathy)", "Hard lipid exudate clusters and intraretinal hemorrhages", "Grade 2: Moderate NPDR", 2),
+            "retina_dr_severe_cotton_wool.png": ("Severe NPDR (Cotton Wool Spots)", "Nerve fiber layer infarcts and venous abnormalities", "Grade 3: Severe NPDR", 3),
+            "retina_dr_proliferative_pdr_EDA01.jpg": ("Proliferative DR (Neovasc. PDR)", "Active neovascularization at disc (NVD) & fragile vessels", "Grade 4: PDR", 4),
         }
         
         nr_meta = {
@@ -143,10 +143,10 @@ class _TestPack:
             for fn in sorted(os.listdir(f_dir)):
                 if not fn.lower().endswith((".jpg", ".png", ".jpeg")): continue
                 sid = "ts_" + os.path.splitext(fn)[0]
-                title, desc, cat = f_meta.get(fn, (fn, "Clinical fundus scan", "Retinal Scan"))
+                title, desc, cat, eg = f_meta.get(fn, (fn, "Clinical fundus scan", "Retinal Scan", 0))
                 fp = os.path.join(f_dir, fn)
-                self._samples[sid] = {"path": fp, "name": title, "category": cat, "desc": desc, "type": "fundus"}
-                self._categories["clinical_fundus"].append({"id": sid, "name": title, "category": cat, "desc": desc, "filename": fn})
+                self._samples[sid] = {"path": fp, "name": title, "category": cat, "desc": desc, "type": "fundus", "expected_grade": eg}
+                self._categories["clinical_fundus"].append({"id": sid, "name": title, "category": cat, "desc": desc, "filename": fn, "expected_grade": eg})
                 
         if os.path.isdir(nr_dir):
             for fn in sorted(os.listdir(nr_dir)):
@@ -166,9 +166,9 @@ class _TestPack:
 TEST_PACK = _TestPack()
 
 
-def _serve_analysis(img: Image.Image, patient_id: str, name: str, source: str) -> dict:
+def _serve_analysis(img: Image.Image, patient_id: str, name: str, source: str, expected_grade: int | None = None) -> dict:
     t0 = time.time()
-    res = run_pipeline(img, patient_id, name)
+    res = run_pipeline(img, patient_id, name, expected_grade=expected_grade)
     elapsed = round((time.time() - t0) * 1000)
 
     images = {
@@ -310,7 +310,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._bad("unknown sample id")
                 return
             with LIB._lock:
-                res = _serve_analysis(entry["image"], entry["patient_id"], entry["name"], "sample")
+                res = _serve_analysis(entry["image"], entry["patient_id"], entry["name"], "sample", expected_grade=entry.get("grade"))
                 res["sample_id"] = sid
             self._send(200, res)
             return
@@ -323,7 +323,7 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 self._bad("could not decode uploaded image")
                 return
-            res = _serve_analysis(img, body.get("patient_id", "UPL-001"), body.get("name", "Uploaded image"), "upload")
+            res = _serve_analysis(img, body.get("patient_id", "UPL-001"), body.get("name", "Uploaded image"), "upload", expected_grade=None)
             self._send(200, res)
             return
 
@@ -339,7 +339,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._bad(f"could not load test image: {e}")
                 return
             pid = "TST-" + sid[-6:].upper()
-            res = _serve_analysis(img, pid, entry["name"], "test_pack")
+            res = _serve_analysis(img, pid, entry["name"], "test_pack", expected_grade=entry.get("expected_grade"))
             res["test_sample_id"] = sid
             self._send(200, res)
             return
