@@ -644,7 +644,7 @@
     width: 0%;
     height: 100%;
     background: var(--accent-cyan);
-    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width 0.75s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .pipeline-step.done {
@@ -1147,7 +1147,7 @@
   .cyber-meter-fill {
     height: 100%;
     background: linear-gradient(90deg, #00d2b4, #00f0ff, #38bdf8);
-    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width 0.75s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 0 10px rgba(0, 240, 255, 0.8);
   }
 
@@ -2799,8 +2799,8 @@ async function executeScreening(payload) {
     // Initiate analysis in parallel
     const analysisPromise = analyzeScan(payload);
 
-    // Stage 1 animation pacing
-    await sleep(280);
+    // Stage 1 animation pacing (quality gate & validation)
+    await sleep(850);
 
     // Wait for server analysis response
     const result = await analysisPromise;
@@ -2833,7 +2833,7 @@ async function executeScreening(payload) {
       state.results.unshift(result);
       if (state.results.length > 50) state.results.pop();
 
-      await sleep(400);
+      await sleep(750);
       renderDiagnosticResult(result);
       renderPatientList();
       showNonRetinaAlert(result);
@@ -2843,30 +2843,30 @@ async function executeScreening(payload) {
     // Step 2: Multi-Scale Enhancement
     updatePipelineHUD(1, "running");
     updateScannerMonitor(1);
-    await sleep(260);
+    await sleep(900);
 
     // Step 3: Lesion Saliency & Heatmap
     updatePipelineHUD(2, "running");
     updateScannerMonitor(2);
-    await sleep(260);
+    await sleep(950);
 
     // Step 4: ICDR Deep Ensemble Grading
     updatePipelineHUD(3, "running");
     updateScannerMonitor(3);
-    await sleep(260);
+    await sleep(950);
 
     // Step 5: Clinical Triage & Report
     updatePipelineHUD(4, "running");
     updateScannerMonitor(4);
-    await sleep(220);
+    await sleep(850);
 
-    // Complete all stages
+    // Complete all stages (Hold 100% verified state so user sees all checkmarks complete)
     updatePipelineHUD(5, "done");
     if ($("#cyber-meter-fill")) $("#cyber-meter-fill").style.width = "100%";
     if ($("#cyber-meter-pct")) $("#cyber-meter-pct").textContent = "100%";
     if ($("#cyber-meter-status")) $("#cyber-meter-status").textContent = "ANALYSIS COMPLETE";
     if ($("#tele-target")) $("#tele-target").textContent = "TARGET VERIFIED";
-    await sleep(200);
+    await sleep(650);
 
     state.current = result;
     state.results.unshift(result);
