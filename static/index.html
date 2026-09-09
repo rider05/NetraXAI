@@ -856,6 +856,60 @@
     object-fit: contain;
   }
 
+  .canvas-image.evidence-reveal {
+    animation: evidenceReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes evidenceReveal {
+    0% {
+      opacity: 0;
+      filter: blur(16px) brightness(1.35) saturate(0.8);
+      transform: scale(0.95);
+    }
+    50% {
+      opacity: 0.9;
+      filter: blur(3px) brightness(1.08) saturate(1.05);
+    }
+    100% {
+      opacity: 1;
+      filter: blur(0px) brightness(1) saturate(1);
+      transform: scale(1);
+    }
+  }
+
+  .evidence-scanline {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, #00d2b4, #ffffff, #00d2b4, transparent);
+    box-shadow: 0 0 20px #00d2b4, 0 0 40px rgba(0, 210, 180, 0.6);
+    z-index: 10;
+    pointer-events: none;
+    animation: scanlinePass 0.85s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+  }
+
+  @keyframes scanlinePass {
+    0% { top: 0%; opacity: 1; }
+    80% { opacity: 0.9; }
+    100% { top: 100%; opacity: 0; }
+  }
+
+  .card-reveal-in {
+    animation: cardRevealIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes cardRevealIn {
+    0% {
+      opacity: 0.25;
+      transform: translateY(14px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   /* CYBER-OPTIC LASER GRID & TARGET LOCK SUITE */
   .cyber-scanner-container {
     position: relative;
@@ -1158,6 +1212,15 @@
     font-size: 10px;
     color: var(--text-muted);
     margin-top: 3px;
+  }
+
+  /* RESOLVING TRANSITION STATE */
+  .cyber-scanner-container.resolving {
+    transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.16, 1, 0.3, 1), filter 0.55s ease;
+    opacity: 0 !important;
+    transform: scale(1.04);
+    filter: brightness(1.25) blur(5px);
+    pointer-events: none;
   }
 
   /* CYBER FAILED HAZARD STATE */
@@ -2104,7 +2167,7 @@
         </div>
 
         <!-- STAGE 1 QUALITY SCORECARD -->
-        <div class="card">
+        <div class="card" id="quality-gate-card">
           <div class="card-header">
             <span class="card-title">🛡️ Retinal Capture Quality Gate</span>
             <span id="quality-overall-score" style="font-family:var(--font-mono); font-weight:700; color:var(--accent-cyan)">--/100</span>
@@ -2125,7 +2188,7 @@
         </div>
 
         <!-- BIOMARKER DETECTIONS -->
-        <div class="card">
+        <div class="card" id="biomarker-card">
           <div class="card-header">
             <span class="card-title">🔍 Detected Retinal Biomarkers</span>
             <span style="font-size:11px; color:var(--text-muted)">Lesion Counts</span>
@@ -2864,9 +2927,14 @@ async function executeScreening(payload) {
     updatePipelineHUD(5, "done");
     if ($("#cyber-meter-fill")) $("#cyber-meter-fill").style.width = "100%";
     if ($("#cyber-meter-pct")) $("#cyber-meter-pct").textContent = "100%";
-    if ($("#cyber-meter-status")) $("#cyber-meter-status").textContent = "ANALYSIS COMPLETE";
+    if ($("#cyber-meter-status")) $("#cyber-meter-status").textContent = "VERIFIED // RESOLVING EVIDENCE MAP";
     if ($("#tele-target")) $("#tele-target").textContent = "TARGET VERIFIED";
-    await sleep(650);
+    await sleep(700);
+
+    // Smooth resolving transition out of the scanner
+    const scannerHud = $("#cyber-scanner-hud");
+    if (scannerHud) scannerHud.classList.add("resolving");
+    await sleep(400);
 
     state.current = result;
     state.results.unshift(result);
@@ -2977,12 +3045,41 @@ function renderDiagnosticResult(res) {
   $("#count-ex").textContent = lc.exudates;
   $("#count-nv").textContent = lc.neovascularisation;
 
-  // Viewport image setup
+  // Viewport image setup with smooth optical reveal
   const imgEl = $("#primary-fundus-img");
   imgEl.src = res.images.explanation;
   imgEl.style.display = "block";
+  imgEl.classList.remove("evidence-reveal");
+  void imgEl.offsetWidth; // force browser layout/reflow
+  imgEl.classList.add("evidence-reveal");
+
+  // Add scanline ripple pass on the image wrapper
+  const wrapper = $("#image-wrapper");
+  if (wrapper) {
+    const oldScanline = wrapper.querySelector(".evidence-scanline");
+    if (oldScanline) oldScanline.remove();
+    const scanline = document.createElement("div");
+    scanline.className = "evidence-scanline";
+    wrapper.appendChild(scanline);
+    setTimeout(() => { if (scanline.parentNode) scanline.remove(); }, 900);
+  }
+
   $("#viewport-placeholder").style.display = "none";
+  $("#viewport-placeholder").classList.remove("resolving");
   $("#split-container").style.display = "none";
+
+  // Trigger smooth cascade reveal on right intelligence rail cards
+  [
+    $("#verdict-card"),
+    $("#quality-gate-card"),
+    $("#biomarker-card")
+  ].forEach((card, idx) => {
+    if (!card) return;
+    card.classList.remove("card-reveal-in");
+    void card.offsetWidth;
+    card.style.animationDelay = `${idx * 0.08}s`;
+    card.classList.add("card-reveal-in");
+  });
 
   // Reset zoom & pan
   state.zoom = 1;
