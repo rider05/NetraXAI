@@ -248,6 +248,25 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(data)
             return
 
+        m_test = re.match(r"^/api/test_image/([A-Za-z0-9_]+)$", path)
+        if m_test:
+            entry = TEST_PACK.get(m_test.group(1))
+            if entry is None or not os.path.isfile(entry["path"]):
+                self._bad("unknown test sample id")
+                return
+            img = Image.open(entry["path"]).convert("RGB")
+            img.thumbnail((900, 900))
+            buf = io.BytesIO()
+            img.save(buf, "PNG")
+            data = buf.getvalue()
+            self.send_response(200)
+            self.send_header("Content-Type", "image/png")
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(data)
+            return
+
         if path == "/" or path == "/index.html":
             self._serve_static("index.html")
             return
