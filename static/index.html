@@ -596,17 +596,18 @@
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: 8px;
-    padding: 8px 10px;
+    padding: 8px 10px 11px;
     display: flex;
     align-items: center;
     gap: 8px;
     position: relative;
-    transition: all 0.2s ease;
+    overflow: hidden;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .pipeline-step .step-num {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background: var(--bg-surface-elevated);
     border: 1px solid var(--border-strong);
@@ -616,6 +617,7 @@
     font-weight: 700;
     color: var(--text-muted);
     flex-shrink: 0;
+    transition: all 0.25s ease;
   }
 
   .pipeline-step .step-title {
@@ -626,10 +628,27 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: color 0.2s ease;
+  }
+
+  .step-progress-track {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--border-subtle);
+  }
+
+  .step-progress-bar {
+    width: 0%;
+    height: 100%;
+    background: var(--accent-cyan);
+    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .pipeline-step.done {
-    border-color: rgba(16, 185, 129, 0.4);
+    border-color: rgba(16, 185, 129, 0.5);
     background: var(--status-ok-bg);
   }
 
@@ -637,22 +656,94 @@
     background: var(--status-ok);
     color: #ffffff;
     border-color: var(--status-ok);
+    animation: checkPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
 
   .pipeline-step.done .step-title {
     color: var(--text-primary);
   }
 
+  .pipeline-step.done .step-progress-bar {
+    width: 100% !important;
+    background: var(--status-ok);
+  }
+
   .pipeline-step.running {
     border-color: var(--accent-cyan);
     background: var(--accent-cyan-subtle);
-    box-shadow: 0 0 10px rgba(0, 210, 180, 0.25);
+    box-shadow: 0 0 14px rgba(0, 210, 180, 0.35);
+    transform: translateY(-1px);
   }
 
   .pipeline-step.running .step-num {
     background: var(--accent-cyan);
     color: #ffffff;
-    animation: pulseGlow 1.2s infinite;
+    border-color: var(--accent-cyan);
+    animation: pulseGlow 1.1s infinite;
+  }
+
+  .pipeline-step.running .step-title {
+    color: var(--accent-cyan);
+    font-weight: 700;
+  }
+
+  .pipeline-step.running .step-progress-bar {
+    background: linear-gradient(90deg, #00d2b4, #00ffff, #00d2b4);
+    background-size: 200% 100%;
+    animation: shimmerBeam 1s linear infinite;
+  }
+
+  .pipeline-step.failed {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.12);
+    animation: stepShake 0.4s ease;
+  }
+
+  .pipeline-step.failed .step-num {
+    background: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
+  }
+
+  .pipeline-step.failed .step-title {
+    color: #ef4444;
+  }
+
+  .pipeline-step.failed .step-progress-bar {
+    width: 100% !important;
+    background: #ef4444;
+  }
+
+  .pipeline-step.bypassed {
+    opacity: 0.45;
+    filter: grayscale(0.8);
+  }
+
+  @keyframes shimmerBeam {
+    0% { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+  }
+
+  @keyframes pulseGlow {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 210, 180, 0.7); }
+    50% { transform: scale(1.1); box-shadow: 0 0 0 5px rgba(0, 210, 180, 0); }
+  }
+
+  @keyframes stepShake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-4px); }
+    40%, 80% { transform: translateX(4px); }
+  }
+
+  @keyframes checkPop {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.25); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 
   /* HIGH-PRECISION VIEWPORT CANVAS */
@@ -763,6 +854,161 @@
     border-radius: 10px;
     box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
     object-fit: contain;
+  }
+
+  /* SCANNER STAGE MONITOR */
+  .scanner-monitor {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+    gap: 18px;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .scanner-reticle {
+    width: 120px;
+    height: 120px;
+    position: relative;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+  }
+
+  .scanner-lens-ring {
+    position: absolute;
+    inset: 0;
+    border: 2px dashed rgba(0, 210, 180, 0.45);
+    border-radius: 50%;
+    animation: rotateSlow 8s linear infinite;
+  }
+
+  .scanner-crosshair {
+    position: absolute;
+    inset: -10px;
+    border: 1px solid rgba(0, 210, 180, 0.25);
+    border-radius: 50%;
+  }
+  .scanner-crosshair::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(0, 210, 180, 0.35);
+  }
+  .scanner-crosshair::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(0, 210, 180, 0.35);
+  }
+
+  .radar-sweep {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, rgba(0, 210, 180, 0.4), transparent 60%);
+    animation: rotateSweep 1.5s linear infinite;
+  }
+
+  @keyframes rotateSweep {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  @keyframes rotateSlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(-360deg); }
+  }
+
+  .scanner-center-core {
+    font-size: 36px;
+    z-index: 5;
+    filter: drop-shadow(0 0 10px rgba(0, 210, 180, 0.7));
+    animation: pulseIcon 1.4s ease-in-out infinite;
+  }
+
+  @keyframes pulseIcon {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.12); }
+  }
+
+  .scanner-meta {
+    width: 100%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .scanner-badge {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--accent-cyan);
+    background: var(--accent-cyan-subtle);
+    border: 1px solid rgba(0, 210, 180, 0.35);
+    padding: 3px 12px;
+    border-radius: 20px;
+    animation: pulseBadge 1.5s infinite;
+  }
+
+  @keyframes pulseBadge {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.75; }
+  }
+
+  .scanner-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .scanner-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    margin: 0;
+    min-height: 34px;
+    max-width: 380px;
+  }
+
+  .scanner-progress-wrap {
+    width: 260px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+
+  .scanner-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #00d2b4, #00a8ff);
+    border-radius: 10px;
+    transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 8px rgba(0, 210, 180, 0.6);
+  }
+
+  .scanner-telemetry-row {
+    display: flex;
+    justify-content: space-between;
+    width: 260px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-muted);
   }
 
   /* SPLIT COMPARATOR */
@@ -1550,24 +1796,29 @@
         <!-- PIPELINE HUD STATUS -->
         <div class="pipeline-hud">
           <div class="pipeline-step" id="step-0">
-            <div class="step-num">1</div>
+            <div class="step-num" id="step-icon-0">1</div>
             <div class="step-title">Quality Gate</div>
+            <div class="step-progress-track"><div class="step-progress-bar" id="step-bar-0"></div></div>
           </div>
           <div class="pipeline-step" id="step-1">
-            <div class="step-num">2</div>
+            <div class="step-num" id="step-icon-1">2</div>
             <div class="step-title">Enhancement</div>
+            <div class="step-progress-track"><div class="step-progress-bar" id="step-bar-1"></div></div>
           </div>
           <div class="pipeline-step" id="step-2">
-            <div class="step-num">3</div>
+            <div class="step-num" id="step-icon-2">3</div>
             <div class="step-title">Lesion Saliency</div>
+            <div class="step-progress-track"><div class="step-progress-bar" id="step-bar-2"></div></div>
           </div>
           <div class="pipeline-step" id="step-3">
-            <div class="step-num">4</div>
+            <div class="step-num" id="step-icon-3">4</div>
             <div class="step-title">ICDR Grading</div>
+            <div class="step-progress-track"><div class="step-progress-bar" id="step-bar-3"></div></div>
           </div>
           <div class="pipeline-step" id="step-4">
-            <div class="step-num">5</div>
+            <div class="step-num" id="step-icon-4">5</div>
             <div class="step-title">Report &amp; Triage</div>
+            <div class="step-progress-track"><div class="step-progress-bar" id="step-bar-4"></div></div>
           </div>
         </div>
 
@@ -2008,20 +2259,110 @@ $$(".nav-tab").forEach(tab => {
   });
 });
 
+// STAGE ANIMATION METADATA
+const STAGE_METADATA = [
+  {
+    num: 1,
+    title: "Stage 1: Quality Gate & Validation",
+    badge: "STAGE 1 / 5 · QUALITY GATE",
+    desc: "Validating retinal anatomical signatures, FOV curvature & gradability index...",
+    icon: "🔬",
+    pct: 20
+  },
+  {
+    num: 2,
+    title: "Stage 2: Multi-Scale Enhancement",
+    badge: "STAGE 2 / 5 · PREPROCESSING",
+    desc: "Calibrating illumination, local CLAHE contrast & micro-vessel sharpness...",
+    icon: "✨",
+    pct: 40
+  },
+  {
+    num: 3,
+    title: "Stage 3: Lesion Saliency & Heatmap",
+    badge: "STAGE 3 / 5 · ATTENTION MAPPING",
+    desc: "Computing Grad-CAM saliency to localize microaneurysms, hemorrhages & exudates...",
+    icon: "🎯",
+    pct: 60
+  },
+  {
+    num: 4,
+    title: "Stage 4: ICDR Deep Ensemble Grading",
+    badge: "STAGE 4 / 5 · NEURAL INFERENCE",
+    desc: "Running ResNet50 deep ensemble inference to grade diabetic retinopathy severity...",
+    icon: "🧠",
+    pct: 80
+  },
+  {
+    num: 5,
+    title: "Stage 5: Clinical Triage & Report",
+    badge: "STAGE 5 / 5 · SYNTHESIS",
+    desc: "Synthesizing diagnostic report, risk stratification & referral timeline...",
+    icon: "📋",
+    pct: 100
+  }
+];
+
 // PIPELINE HUD STEPS
-function updatePipelineHUD(activeStep) {
+function updatePipelineHUD(activeStep, status = "running") {
   for (let i = 0; i < 5; i++) {
     const el = $(`#step-${i}`);
+    const icon = $(`#step-icon-${i}`);
+    const bar = $(`#step-bar-${i}`);
+    if (!el) continue;
+
     if (activeStep === -1) {
       el.className = "pipeline-step";
+      if (icon) icon.textContent = `${i + 1}`;
+      if (bar) bar.style.width = "0%";
+    } else if (activeStep >= 5) {
+      el.className = "pipeline-step done";
+      if (icon) icon.textContent = "✓";
+      if (bar) bar.style.width = "100%";
     } else if (i < activeStep) {
       el.className = "pipeline-step done";
+      if (icon) icon.textContent = "✓";
+      if (bar) bar.style.width = "100%";
     } else if (i === activeStep) {
-      el.className = "pipeline-step running";
+      if (status === "failed") {
+        el.className = "pipeline-step failed";
+        if (icon) icon.textContent = "⚠️";
+        if (bar) bar.style.width = "100%";
+      } else {
+        el.className = "pipeline-step running";
+        if (icon) icon.innerHTML = `<span style="display:inline-block; animation:spin 0.9s linear infinite">⟳</span>`;
+        if (bar) bar.style.width = "75%";
+      }
     } else {
-      el.className = "pipeline-step";
+      if (status === "failed") {
+        el.className = "pipeline-step bypassed";
+      } else {
+        el.className = "pipeline-step";
+      }
+      if (icon) icon.textContent = `${i + 1}`;
+      if (bar) bar.style.width = "0%";
     }
   }
+}
+
+function updateScannerMonitor(stageIdx) {
+  const meta = STAGE_METADATA[stageIdx];
+  if (!meta) return;
+  const iconEl = $("#scanner-icon");
+  const badgeEl = $("#scanner-badge");
+  const titleEl = $("#scanner-title");
+  const descEl = $("#scanner-desc");
+  const barEl = $("#scanner-bar");
+  const pctEl = $("#scanner-pct");
+  const statusEl = $("#scanner-status");
+
+  if (iconEl) iconEl.textContent = meta.icon;
+  if (badgeEl) badgeEl.textContent = meta.badge;
+  if (titleEl) titleEl.textContent = meta.title;
+  if (descEl) descEl.textContent = meta.desc;
+  if (barEl) barEl.style.width = `${meta.pct}%`;
+  if (pctEl) pctEl.textContent = `${meta.pct}%`;
+  if (statusEl) statusEl.textContent = stageIdx === 4 ? "FINALIZING..." : "PROCESSING...";
 }
 
 // RENDER PATIENT LIST
@@ -2094,39 +2435,108 @@ async function executeScreening(payload) {
     return;
   }
   state.busy = true;
-  updatePipelineHUD(0);
+  updatePipelineHUD(0, "running");
 
-  // Set loading placeholder in viewport
-  $("#viewport-placeholder").style.display = "block";
-  $("#viewport-placeholder").innerHTML = `
-    <div class="spinner-ring"></div>
-    <h3 style="color:var(--accent-cyan); font-size:15px">Running NetraXAI Diagnostic Pipeline</h3>
-    <p style="color:var(--text-secondary); font-size:12.5px; margin-top:4px">Assessing capture quality, detecting lesions &amp; calibrating ICDR grade...</p>
+  // Mount holographic scanner in viewport
+  const placeholder = $("#viewport-placeholder");
+  placeholder.style.display = "flex";
+  placeholder.style.flexDirection = "column";
+  placeholder.style.alignItems = "center";
+  placeholder.style.justifyContent = "center";
+  placeholder.innerHTML = `
+    <div class="scanner-monitor">
+      <div class="scanner-reticle">
+        <div class="scanner-lens-ring"></div>
+        <div class="scanner-crosshair"></div>
+        <div class="radar-sweep"></div>
+        <div class="scanner-center-core" id="scanner-icon">${STAGE_METADATA[0].icon}</div>
+      </div>
+      <div class="scanner-meta">
+        <div class="scanner-badge" id="scanner-badge">${STAGE_METADATA[0].badge}</div>
+        <h3 class="scanner-title" id="scanner-title">${STAGE_METADATA[0].title}</h3>
+        <p class="scanner-desc" id="scanner-desc">${STAGE_METADATA[0].desc}</p>
+        <div class="scanner-progress-wrap">
+          <div class="scanner-progress-bar" id="scanner-bar" style="width: ${STAGE_METADATA[0].pct}%"></div>
+        </div>
+        <div class="scanner-telemetry-row">
+          <span id="scanner-status">ANALYZING SCAN...</span>
+          <span id="scanner-pct">${STAGE_METADATA[0].pct}%</span>
+        </div>
+      </div>
+    </div>
   `;
   $("#primary-fundus-img").style.display = "none";
   $("#split-container").style.display = "none";
 
-  try {
-    // Step simulation
-    setTimeout(() => updatePipelineHUD(1), 200);
-    setTimeout(() => updatePipelineHUD(2), 400);
-    setTimeout(() => updatePipelineHUD(3), 600);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-    const result = await analyzeScan(payload);
-    
-    updatePipelineHUD(5); // all completed
+  try {
+    // Initiate analysis in parallel
+    const analysisPromise = analyzeScan(payload);
+
+    // Stage 1 animation pacing
+    await sleep(280);
+
+    // Wait for server analysis response
+    const result = await analysisPromise;
+
+    // Check if rejected by quality gate / non-retinal
+    if (result.quality && (result.quality.status === "invalid" || result.quality.is_retina === false)) {
+      updatePipelineHUD(0, "failed");
+      const sStatus = $("#scanner-status");
+      const sBadge = $("#scanner-badge");
+      const sDesc = $("#scanner-desc");
+      const sIcon = $("#scanner-icon");
+      if (sStatus) { sStatus.textContent = "REJECTED"; sStatus.style.color = "#ef4444"; }
+      if (sBadge) { sBadge.textContent = "QUALITY GATE FAILED"; sBadge.style.borderColor = "#ef4444"; sBadge.style.color = "#ef4444"; }
+      if (sDesc) sDesc.textContent = "Non-retinal input detected. Automated screening halted to safeguard clinical safety.";
+      if (sIcon) sIcon.textContent = "⚠️";
+
+      state.current = result;
+      state.results.unshift(result);
+      if (state.results.length > 50) state.results.pop();
+
+      await sleep(350);
+      renderDiagnosticResult(result);
+      renderPatientList();
+      showNonRetinaAlert(result);
+      return;
+    }
+
+    // Step 2: Multi-Scale Enhancement
+    updatePipelineHUD(1, "running");
+    updateScannerMonitor(1);
+    await sleep(260);
+
+    // Step 3: Lesion Saliency & Heatmap
+    updatePipelineHUD(2, "running");
+    updateScannerMonitor(2);
+    await sleep(260);
+
+    // Step 4: ICDR Deep Ensemble Grading
+    updatePipelineHUD(3, "running");
+    updateScannerMonitor(3);
+    await sleep(260);
+
+    // Step 5: Clinical Triage & Report
+    updatePipelineHUD(4, "running");
+    updateScannerMonitor(4);
+    await sleep(220);
+
+    // Complete all stages
+    updatePipelineHUD(5, "done");
+    if ($("#scanner-bar")) $("#scanner-bar").style.width = "100%";
+    if ($("#scanner-pct")) $("#scanner-pct").textContent = "100%";
+    if ($("#scanner-status")) $("#scanner-status").textContent = "COMPLETE";
+    await sleep(180);
+
     state.current = result;
     state.results.unshift(result);
     if (state.results.length > 50) state.results.pop();
 
     renderDiagnosticResult(result);
     renderPatientList();
-    
-    if (result.quality.status === "invalid" || result.quality.is_retina === false) {
-      showNonRetinaAlert(result);
-    } else {
-      showToast(`Screening complete for ${result.name}`);
-    }
+    showToast(`Screening complete for ${result.name}`);
   } catch (err) {
     updatePipelineHUD(-1);
     $("#viewport-placeholder").innerHTML = `
