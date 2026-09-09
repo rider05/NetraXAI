@@ -110,6 +110,61 @@ class _Library:
 
 LIB = _Library()
 
+TEST_SAMPLES_DIR = os.path.join(BASE, "test_samples")
+
+class _TestPack:
+    """Manager for real clinical fundus test images and non-retinal alert test images."""
+    def __init__(self):
+        self._samples = {}
+        self._categories = {"clinical_fundus": [], "alert_tests": []}
+        
+        f_dir = os.path.join(TEST_SAMPLES_DIR, "01_retinal_fundus_scans")
+        nr_dir = os.path.join(TEST_SAMPLES_DIR, "02_non_retinal_alert_tests")
+        
+        f_meta = {
+            "retina_normal_healthy_OS.jpg": ("Normal Healthy Retina (OS)", "Healthy left eye fundus scan with sharp macula and disc", "Grade 0: Normal"),
+            "retina_normal_macula_OD.jpg": ("Normal Healthy Retina (OD)", "Normal right eye fundus photograph (NIH / NEI)", "Grade 0: Normal"),
+            "retina_normal_field_scan.jpg": ("Normal Posterior Pole Scan", "Clear fundus scan with normal retinal vascular branching", "Grade 0: Normal"),
+            "retina_normal_healthy_EDA06.jpg": ("Normal Retina Benchmark", "National Eye Institute standard reference fundus", "Grade 0: Normal"),
+            "retina_dr_mild_early_EDA03.jpg": ("Mild NPDR (Early Microaneurysms)", "Early scattered microaneurysms and dot hemorrhages", "Grade 1: Mild NPDR"),
+            "retina_dr_moderate_maculopathy.png": ("Moderate NPDR (Maculopathy)", "Hard lipid exudate clusters and intraretinal hemorrhages", "Grade 2: Moderate NPDR"),
+            "retina_dr_severe_cotton_wool.png": ("Severe NPDR (Cotton Wool Spots)", "Nerve fiber layer infarcts and venous abnormalities", "Grade 3: Severe NPDR"),
+            "retina_dr_proliferative_pdr_EDA01.jpg": ("Proliferative DR (Neovasc. PDR)", "Active neovascularization at disc (NVD) & fragile vessels", "Grade 4: PDR"),
+        }
+        
+        nr_meta = {
+            "non_retina_chest_radiograph_xray.png": ("PA Chest Radiograph (X-Ray)", "Clinical chest X-ray image (Tests monochrome/grayscale alert)", "Non-Retinal Radiograph"),
+            "non_retina_medical_prescription_doc.png": ("Medical Prescription Document", "Scanned paper clinical report (Tests document rejection alert)", "Non-Retinal Document"),
+            "non_retina_skin_selfie_sample.jpg": ("Skin / Facial Photo Sample", "Skin photo without ocular structures (Tests vessel detector alert)", "Non-Retinal Skin"),
+            "non_retina_blue_sky_nature.jpg": ("Outdoor Blue Sky Landscape", "Landscape photo (Tests non-ocular blue spectrum alert)", "Non-Retinal Nature"),
+        }
+        
+        if os.path.isdir(f_dir):
+            for fn in sorted(os.listdir(f_dir)):
+                if not fn.lower().endswith((".jpg", ".png", ".jpeg")): continue
+                sid = "ts_" + os.path.splitext(fn)[0]
+                title, desc, cat = f_meta.get(fn, (fn, "Clinical fundus scan", "Retinal Scan"))
+                fp = os.path.join(f_dir, fn)
+                self._samples[sid] = {"path": fp, "name": title, "category": cat, "desc": desc, "type": "fundus"}
+                self._categories["clinical_fundus"].append({"id": sid, "name": title, "category": cat, "desc": desc, "filename": fn})
+                
+        if os.path.isdir(nr_dir):
+            for fn in sorted(os.listdir(nr_dir)):
+                if not fn.lower().endswith((".jpg", ".png", ".jpeg")): continue
+                sid = "ts_" + os.path.splitext(fn)[0]
+                title, desc, cat = nr_meta.get(fn, (fn, "Non-retinal test image", "Alert Test"))
+                fp = os.path.join(nr_dir, fn)
+                self._samples[sid] = {"path": fp, "name": title, "category": cat, "desc": desc, "type": "alert"}
+                self._categories["alert_tests"].append({"id": sid, "name": title, "category": cat, "desc": desc, "filename": fn})
+
+    def list_all(self):
+        return self._categories
+
+    def get(self, sid):
+        return self._samples.get(sid)
+
+TEST_PACK = _TestPack()
+
 
 def _serve_analysis(img: Image.Image, patient_id: str, name: str, source: str) -> dict:
     t0 = time.time()
@@ -168,6 +223,10 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/samples":
             self._send(200, {"samples": LIB.cards()})
+            return
+
+        if path == "/api/test_samples":
+            self._send(200, TEST_PACK.list_all())
             return
 
         m = re.match(r"^/api/image/([A-Za-z0-9_]+)$", path)
@@ -246,6 +305,23 @@ class Handler(BaseHTTPRequestHandler):
                 self._bad("could not decode uploaded image")
                 return
             res = _serve_analysis(img, body.get("patient_id", "UPL-001"), body.get("name", "Uploaded image"), "upload")
+            self._send(200, res)
+            return
+
+        if source == "test_pack":
+            sid = body.get("id", "")
+            entry = TEST_PACK.get(sid)
+            if entry is None:
+                self._bad("unknown test sample id")
+                return
+            try:
+                img = Image.open(entry["path"]).convert("RGB")
+            except Exception as e:
+                self._bad(f"could not load test image: {e}")
+                return
+            pid = "TST-" + sid[-6:].upper()
+            res = _serve_analysis(img, pid, entry["name"], "test_pack")
+            res["test_sample_id"] = sid
             self._send(200, res)
             return
 

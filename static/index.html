@@ -1374,6 +1374,57 @@
   }
 
   .hidden { display: none !important; }
+
+  /* TESTPACK MODAL STYLES */
+  .testpack-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 12px;
+  }
+  .testpack-card {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.15s ease;
+  }
+  .testpack-card:hover {
+    border-color: var(--accent-cyan);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-2px);
+  }
+  .testpack-card.alert-card:hover {
+    border-color: #ef4444;
+  }
+  .testpack-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .testpack-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .testpack-desc {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    margin-bottom: 10px;
+  }
+  .testpack-btn {
+    width: 100%;
+    padding: 6px 10px;
+    font-size: 11.5px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -1399,6 +1450,9 @@
   </div>
 
   <div class="header-actions">
+    <button class="btn btn-secondary" onclick="openTestPackModal()" id="btn-header-testpack" style="background:var(--accent-cyan-subtle); color:var(--accent-cyan); border-color:var(--accent-cyan)">
+      <span>🧪 Real Clinical Test Pack</span>
+    </button>
     <button class="btn btn-secondary" onclick="openReport()" id="btn-header-report" disabled>
       <span>📄 Referral Slip</span>
     </button>
@@ -1461,6 +1515,10 @@
               <div class="up-desc">Drop PNG / JPEG or click to browse</div>
               <input type="file" id="file-input" accept="image/*" class="hidden">
             </div>
+
+            <button class="btn btn-secondary" style="width:100%; margin:8px 0; font-size:12px; font-weight:600; padding:8px 10px; background:var(--accent-cyan-subtle); color:var(--accent-cyan); border-color:var(--accent-cyan)" onclick="openTestPackModal()">
+              <span>🧪 Open Real Clinical Test Pack</span>
+            </button>
 
             <!-- PATIENT SCROLL LIST -->
             <div class="patient-list" id="patient-list">
@@ -1810,6 +1868,60 @@
         <span>✓ Acknowledge &amp; Upload Valid Fundus Scan</span>
       </button>
     </div>
+  </div>
+</div>
+
+<!-- TEST SAMPLE PACK MODAL -->
+<div class="modal-backdrop" id="test-pack-modal">
+  <div class="report-slip" style="max-width:860px; background:var(--bg-surface); color:var(--text-primary); border:1px solid var(--border-strong)">
+    
+    <div class="slip-header" style="background:linear-gradient(135deg, #09335a, #0e5a9e)">
+      <div>
+        <h2 style="font-size:18px; font-weight:800; margin:0">🧪 Clinical Test Samples &amp; Alert Test Suite</h2>
+        <div style="font-size:12px; opacity:0.85; margin-top:2px">Real National Eye Institute fundus photos &amp; Out-of-Distribution negative cases</div>
+      </div>
+      <div style="display:flex; gap:8px">
+        <button class="btn btn-secondary" style="background:rgba(255,255,255,0.2); color:#ffffff; border-color:transparent" onclick="closeTestPackModal()">✕ Close</button>
+      </div>
+    </div>
+
+    <div style="padding:20px 24px; max-height:72vh; overflow-y:auto">
+      
+      <!-- Section 1: Real Clinical Fundus Photos -->
+      <div style="margin-bottom:24px">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+          <div>
+            <h3 style="font-size:14.5px; font-weight:700; margin:0; color:var(--text-primary)">👁️ Real Clinical Retinal Fundus Scans (8 Cases)</h3>
+            <p style="font-size:11.5px; color:var(--text-secondary); margin:2px 0 0">Real patient scans covering Normal (L0) to Proliferative DR (L4). Click any to run automated screening.</p>
+          </div>
+          <span class="badge" style="background:var(--accent-cyan-subtle); color:var(--accent-cyan); font-size:11px; padding:4px 8px">8 Clinical Scans</span>
+        </div>
+        <div class="testpack-grid" id="grid-fundus-pack">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Section 2: Non-Retinal Alert Testing -->
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+          <div>
+            <h3 style="font-size:14.5px; font-weight:700; margin:0; color:#ef4444">⚠️ Non-Retinal Images for Alert Testing (4 Negative Controls)</h3>
+            <p style="font-size:11.5px; color:var(--text-secondary); margin:2px 0 0">Chest X-ray, paper document, skin photo, and blue sky. Click any to verify the automated alert.</p>
+          </div>
+          <span class="badge" style="background:rgba(239,68,68,0.15); color:#ef4444; font-size:11px; padding:4px 8px">4 Alert Tests</span>
+        </div>
+        <div class="testpack-grid" id="grid-alert-pack">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+    </div>
+
+    <div style="padding:14px 24px; background:var(--bg-surface-elevated); border-top:1px solid var(--border-subtle); display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text-muted)">
+      <span>📁 Local disk directory: <code style="font-family:var(--font-mono); color:var(--text-primary)">d:\sih\prototype\test_samples\</code></span>
+      <button class="btn btn-secondary" onclick="closeTestPackModal()">Close</button>
+    </div>
+
   </div>
 </div>
 
@@ -2343,6 +2455,79 @@ function showNonRetinaAlert(res) {
 
 function closeNonRetinaModal() {
   $("#non-retina-modal").classList.remove("open");
+}
+
+// REAL CLINICAL TEST PACK & ALERT TEST SUITE
+let testPackData = null;
+
+async function fetchTestSamples() {
+  if (testPackData) return testPackData;
+  try {
+    const res = await fetch("/api/test_samples");
+    if (!res.ok) throw new Error("Could not fetch test pack");
+    testPackData = await res.json();
+    return testPackData;
+  } catch (e) {
+    console.error("Test pack load error:", e);
+    return { clinical_fundus: [], alert_tests: [] };
+  }
+}
+
+async function openTestPackModal() {
+  const modal = $("#test-pack-modal");
+  modal.classList.add("open");
+  const data = await fetchTestSamples();
+
+  const fundusGrid = $("#grid-fundus-pack");
+  const alertGrid = $("#grid-alert-pack");
+
+  if (data.clinical_fundus && data.clinical_fundus.length) {
+    fundusGrid.innerHTML = data.clinical_fundus.map(item => `
+      <div class="testpack-card">
+        <div>
+          <div class="testpack-card-header">
+            <div class="testpack-title">${esc(item.name)}</div>
+            <span class="badge" style="background:var(--accent-cyan-subtle); color:var(--accent-cyan); font-size:10px">${esc(item.category)}</span>
+          </div>
+          <div class="testpack-desc">${esc(item.desc)}</div>
+        </div>
+        <button class="btn btn-primary testpack-btn" onclick="runTestPackItem('${item.id}', '${esc(item.name)}')">
+          ⚡ Screen Real Case
+        </button>
+      </div>
+    `).join("");
+  } else {
+    fundusGrid.innerHTML = '<div style="color:var(--text-muted); font-size:12px">No clinical fundus samples found.</div>';
+  }
+
+  if (data.alert_tests && data.alert_tests.length) {
+    alertGrid.innerHTML = data.alert_tests.map(item => `
+      <div class="testpack-card alert-card">
+        <div>
+          <div class="testpack-card-header">
+            <div class="testpack-title">${esc(item.name)}</div>
+            <span class="badge" style="background:rgba(239,68,68,0.15); color:#ef4444; font-size:10px">OOD Alert</span>
+          </div>
+          <div class="testpack-desc">${esc(item.desc)}</div>
+        </div>
+        <button class="btn btn-secondary testpack-btn" style="border-color:#ef4444; color:#ef4444" onclick="runTestPackItem('${item.id}', '${esc(item.name)}')">
+          ⚠️ Trigger Alert
+        </button>
+      </div>
+    `).join("");
+  } else {
+    alertGrid.innerHTML = '<div style="color:var(--text-muted); font-size:12px">No alert test samples found.</div>';
+  }
+}
+
+function closeTestPackModal() {
+  $("#test-pack-modal").classList.remove("open");
+}
+
+async function runTestPackItem(id, name) {
+  closeTestPackModal();
+  showToast(`Running AI screening on ${name}...`);
+  await executeScreening({ source: "test_pack", id: id });
 }
 
 // EXPORT AUDIT JSON

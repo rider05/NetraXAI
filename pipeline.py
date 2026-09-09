@@ -194,7 +194,12 @@ def is_retinal_fundus(bgr: np.ndarray) -> Tuple[bool, str]:
     if (mean_g / total_rgb) > 0.45 or (mean_g > mean_r * 1.15 and mean_g > 50):
         return False, "Invalid color spectrum (Excessive green tone incompatible with fundus tissue)"
 
-    # 3. Retinal anatomical structure check (vessels + optic disc)
+    # 3. Excessive neutral bright illumination (documents, radiographs, skin, clothing)
+    neutral_white_pct = np.count_nonzero((r > 130) & (g > 130) & (b > 130)) / (h * w) * 100.0
+    if neutral_white_pct > 25.0:
+        return False, "Detected non-ocular surface, skin, or document (Excessive white/neutral illumination)"
+
+    # 4. Retinal anatomical structure check (vessels + optic disc)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     g_clahe = clahe.apply(g)
     kernel_h = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 1))
