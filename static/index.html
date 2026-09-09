@@ -550,6 +550,7 @@
   .g-2 { background: rgba(245, 158, 11, 0.15); color: var(--grade-2); border: 1px solid rgba(245, 158, 11, 0.3); }
   .g-3 { background: rgba(249, 115, 22, 0.15); color: var(--grade-3); border: 1px solid rgba(249, 115, 22, 0.3); }
   .g-4 { background: rgba(236, 72, 153, 0.15); color: var(--grade-4); border: 1px solid rgba(236, 72, 153, 0.3); }
+  .g-invalid { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
 
   /* CENTER COLUMN: DIAGNOSTIC VIEWPORT & PIPELINE HUD */
   .viewport-header {
@@ -928,6 +929,16 @@
     color: var(--status-ok);
   }
 
+  .triage-alert.invalid {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #ef4444;
+  }
+
+  .verdict-card.invalid::before {
+    background: #ef4444;
+  }
+
   /* CONFIDENCE GAUGE */
   .confidence-box {
     margin-top: 14px;
@@ -1211,6 +1222,119 @@
       border: none;
     }
     .no-print { display: none !important; }
+  }
+
+  /* NON-RETINA ALERT MODAL STYLES */
+  .alert-modal-card {
+    background: var(--bg-surface);
+    border: 2px solid #ef4444;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 520px;
+    box-shadow: 0 25px 60px rgba(239, 68, 68, 0.25), 0 0 0 1px rgba(239, 68, 68, 0.3);
+    overflow: hidden;
+    animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    margin: auto;
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .alert-modal-header {
+    background: linear-gradient(135deg, #991b1b, #dc2626);
+    color: #ffffff;
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .alert-icon-wrap {
+    font-size: 32px;
+    line-height: 1;
+    animation: pulseWarn 1.5s infinite;
+  }
+
+  @keyframes pulseWarn {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+  }
+
+  .alert-title-wrap h3 {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    margin: 0;
+    color: #ffffff;
+  }
+
+  .alert-title-wrap p {
+    font-size: 11px;
+    opacity: 0.9;
+    margin: 3px 0 0;
+    font-family: var(--font-mono);
+    color: #fee2e2;
+  }
+
+  .alert-modal-body {
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .alert-message-box {
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 4px solid #ef4444;
+    padding: 12px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--text-primary);
+    line-height: 1.5;
+  }
+
+  .alert-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 9px 12px;
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    font-size: 12.5px;
+  }
+
+  .alert-detail-row .detail-label {
+    color: var(--text-muted);
+    font-weight: 500;
+    flex-shrink: 0;
+    width: 130px;
+  }
+
+  .alert-detail-row .detail-val {
+    color: #ef4444;
+    font-weight: 700;
+    text-align: right;
+    word-break: break-word;
+  }
+
+  .alert-notice {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    background: var(--bg-surface-subtle);
+    padding: 10px 12px;
+    border-radius: 6px;
+  }
+
+  .alert-modal-footer {
+    padding: 14px 22px;
+    background: var(--bg-surface-elevated);
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: flex-end;
   }
 
   /* TOAST NOTIFICATION */
@@ -1655,6 +1779,40 @@
   </div>
 </div>
 
+<!-- NON-RETINA ALERT MODAL -->
+<div class="modal-backdrop" id="non-retina-modal">
+  <div class="alert-modal-card">
+    <div class="alert-modal-header">
+      <div class="alert-icon-wrap">⚠️</div>
+      <div class="alert-title-wrap">
+        <h3>NON-RETINAL IMAGE DETECTED</h3>
+        <p>Stage 1 Optical Quality Gate · Out-of-Distribution Guardrail</p>
+      </div>
+    </div>
+    <div class="alert-modal-body">
+      <div class="alert-message-box">
+        <strong>Automatic Screening Halted:</strong> The uploaded image does not contain human retinal fundus tissue.
+      </div>
+      <div class="alert-detail-row">
+        <span class="detail-label">Rejection Reason:</span>
+        <span class="detail-val" id="alert-reason-text">--</span>
+      </div>
+      <div class="alert-detail-row">
+        <span class="detail-label">Source File:</span>
+        <span class="detail-val" id="alert-patient-name" style="color:var(--text-primary); font-family:var(--font-mono)">--</span>
+      </div>
+      <div class="alert-notice">
+        🛡️ <b>Clinical Safety Guardrail Active:</b> Diabetic Retinopathy deep learning inference and lesion quantification were safely bypassed to prevent false diagnostic predictions on non-retinal inputs.
+      </div>
+    </div>
+    <div class="alert-modal-footer">
+      <button class="btn btn-primary" style="background:#ef4444; border-color:#dc2626" onclick="closeNonRetinaModal()">
+        <span>✓ Acknowledge &amp; Upload Valid Fundus Scan</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -1851,7 +2009,12 @@ async function executeScreening(payload) {
 
     renderDiagnosticResult(result);
     renderPatientList();
-    showToast(`Screening complete for ${result.name}`);
+    
+    if (result.quality.status === "invalid" || result.quality.is_retina === false) {
+      showNonRetinaAlert(result);
+    } else {
+      showToast(`Screening complete for ${result.name}`);
+    }
   } catch (err) {
     updatePipelineHUD(-1);
     $("#viewport-placeholder").innerHTML = `
@@ -1870,39 +2033,62 @@ function renderDiagnosticResult(res) {
   const g = res.grade;
   const q = res.quality;
   const lc = res.lesions.counts;
+  const isInvalid = (q.status === "invalid" || q.is_retina === false);
 
   // Active Patient Banner
   $("#patient-title").textContent = res.name;
   $("#p-id-tag").textContent = `ID: ${res.patient_id}`;
   $("#p-time-tag").textContent = `Latency: ${res.latency_ms}ms`;
 
-  const qBadgeClass = q.status === "accept" ? "status-ok" : q.status === "enhance" ? "status-warn" : "status-bad";
-  $("#quality-badge-wrap").innerHTML = `
-    <span class="badge" style="background:var(--${qBadgeClass}-bg); color:var(--${qBadgeClass}); border:1px solid var(--${qBadgeClass}-border); padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700">
-      ${q.status.toUpperCase()} · ${esc(q.status_text)}
-    </span>
-  `;
+  if (isInvalid) {
+    $("#quality-badge-wrap").innerHTML = `
+      <span class="badge" style="background:rgba(239, 68, 68, 0.18); color:#ef4444; border:1px solid #ef4444; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700">
+        ⚠️ INVALID · NON-RETINA DETECTED
+      </span>
+    `;
+  } else {
+    const qBadgeClass = q.status === "accept" ? "status-ok" : q.status === "enhance" ? "status-warn" : "status-bad";
+    $("#quality-badge-wrap").innerHTML = `
+      <span class="badge" style="background:var(--${qBadgeClass}-bg); color:var(--${qBadgeClass}); border:1px solid var(--${qBadgeClass}-border); padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700">
+        ${q.status.toUpperCase()} · ${esc(q.status_text)}
+      </span>
+    `;
+  }
 
   // Verdict Card
-  $("#v-grade-label").textContent = g.label;
-  $("#v-grade-label").style.color = GRADE_COLORS[g.level];
-  $("#v-grade-chip").textContent = `Level ${g.level}`;
-  $("#v-grade-chip").className = `grade-chip g-${g.level}`;
-
   const alertBox = $("#triage-alert-box");
   const verdictCard = $("#verdict-card");
-  if (g.referable) {
-    verdictCard.classList.add("referable");
-    alertBox.className = "triage-alert refer";
-    alertBox.innerHTML = `<span>🚨</span><span>REFERABLE — Flagged for Specialist Consultation</span>`;
-  } else {
+
+  if (isInvalid) {
     verdictCard.classList.remove("referable");
-    alertBox.className = "triage-alert non-refer";
-    alertBox.innerHTML = `<span>✓</span><span>NON-REFERABLE — Routine Community Follow-up</span>`;
+    verdictCard.classList.add("invalid");
+    $("#v-grade-label").textContent = "Non-Retina (Invalid)";
+    $("#v-grade-label").style.color = "#ef4444";
+    $("#v-grade-chip").textContent = "REJECTED";
+    $("#v-grade-chip").className = "grade-chip g-invalid";
+
+    alertBox.className = "triage-alert invalid";
+    alertBox.innerHTML = `<span>⚠️</span><span>REJECTED — Non-Retinal Image (${esc(q.rejection_reason || "Out-of-Distribution")})</span>`;
+  } else {
+    verdictCard.classList.remove("invalid");
+    $("#v-grade-label").textContent = g.label;
+    $("#v-grade-label").style.color = GRADE_COLORS[g.level];
+    $("#v-grade-chip").textContent = `Level ${g.level}`;
+    $("#v-grade-chip").className = `grade-chip g-${g.level}`;
+
+    if (g.referable) {
+      verdictCard.classList.add("referable");
+      alertBox.className = "triage-alert refer";
+      alertBox.innerHTML = `<span>🚨</span><span>REFERABLE — Flagged for Specialist Consultation</span>`;
+    } else {
+      verdictCard.classList.remove("referable");
+      alertBox.className = "triage-alert non-refer";
+      alertBox.innerHTML = `<span>✓</span><span>NON-REFERABLE — Routine Community Follow-up</span>`;
+    }
   }
 
   // Confidence
-  const conf = g.confidence.overall;
+  const conf = g.confidence ? g.confidence.overall : 0;
   $("#conf-val").textContent = `${conf}%`;
   $("#conf-bar").style.width = `${conf}%`;
 
@@ -1964,9 +2150,16 @@ function renderDiagnosticResult(res) {
   // Latency footnote
   $("#latency-indicator").textContent = `Latency: ${res.latency_ms} ms · OpenCV/Pillow Engine`;
 
-  // Enable action buttons
-  $("#btn-header-report").disabled = false;
-  $("#btn-view-report").disabled = false;
+  // Action buttons
+  if (isInvalid) {
+    $("#btn-header-report").disabled = true;
+    $("#btn-view-report").disabled = true;
+    $("#btn-view-report").title = "Referral slip unavailable for non-retinal uploads";
+  } else {
+    $("#btn-header-report").disabled = false;
+    $("#btn-view-report").disabled = false;
+    $("#btn-view-report").title = "";
+  }
   $("#btn-export-json").disabled = false;
 }
 
@@ -2115,6 +2308,43 @@ function closeReport() {
   $("#report-modal").classList.remove("open");
 }
 
+// NON-RETINA ALERT SYSTEM
+function playWarningChime() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(440, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+    osc.frequency.exponentialRampToValueAtTime(320, ctx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.35);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.35);
+  } catch (e) {
+    // Audio context may be restricted by user agent
+  }
+}
+
+function showNonRetinaAlert(res) {
+  const q = res.quality || {};
+  const reason = q.rejection_reason || q.status_text || "Image does not depict human retinal fundus tissue";
+  $("#alert-reason-text").textContent = reason;
+  $("#alert-patient-name").textContent = `${res.name} (${res.patient_id})`;
+  $("#non-retina-modal").classList.add("open");
+  playWarningChime();
+  showToast("⚠️ ALERT: Non-retinal image detected! Screening halted.");
+}
+
+function closeNonRetinaModal() {
+  $("#non-retina-modal").classList.remove("open");
+}
+
 // EXPORT AUDIT JSON
 function exportAuditJSON() {
   if (!state.current) return;
@@ -2129,10 +2359,11 @@ function exportAuditJSON() {
 function renderDashboard() {
   const rs = state.results;
   const n = rs.length;
-  const referableCount = rs.filter(r => r.grade.referable).length;
-  const refPct = n > 0 ? Math.round((referableCount / n) * 100) : 0;
-  const avgQ = n > 0 ? Math.round(rs.reduce((a, b) => a + b.quality.score, 0) / n) : 0;
-  const avgLat = n > 0 ? Math.round(rs.reduce((a, b) => a + b.latency_ms, 0) / n) : 0;
+  const validScreenings = rs.filter(r => r.quality.status !== "invalid" && r.quality.is_retina !== false);
+  const referableCount = validScreenings.filter(r => r.grade && r.grade.referable).length;
+  const refPct = validScreenings.length > 0 ? Math.round((referableCount / validScreenings.length) * 100) : 0;
+  const avgQ = n > 0 ? Math.round(rs.reduce((a, b) => a + (b.quality.score || 0), 0) / n) : 0;
+  const avgLat = n > 0 ? Math.round(rs.reduce((a, b) => a + (b.latency_ms || 0), 0) / n) : 0;
 
   $("#kpi-total").textContent = n;
   $("#kpi-referable").textContent = `${refPct}% (${referableCount})`;
@@ -2145,17 +2376,28 @@ function renderDashboard() {
     return;
   }
 
-  tbody.innerHTML = rs.map(r => `
-    <tr>
-      <td style="font-family:var(--font-mono); font-weight:600">${esc(r.patient_id)}</td>
-      <td><b>${esc(r.name)}</b></td>
-      <td><span class="badge" style="background:var(--bg-surface-elevated); padding:3px 8px; border-radius:4px; font-family:var(--font-mono)">${r.quality.score}</span></td>
-      <td style="color:${GRADE_COLORS[r.grade.level]}; font-weight:700">L${r.grade.level} · ${esc(r.grade.label)}</td>
-      <td>${r.grade.referable ? '<span style="color:var(--status-bad); font-weight:700">🚨 Refer to Specialist</span>' : '<span style="color:var(--status-ok)">✓ Routine Follow-up</span>'}</td>
-      <td style="font-family:var(--font-mono)">${r.grade.confidence.overall}%</td>
-      <td style="font-family:var(--font-mono); color:var(--text-muted)">${r.latency_ms} ms</td>
-    </tr>
-  `).join("");
+  tbody.innerHTML = rs.map(r => {
+    const isInvalid = r.quality.status === "invalid" || r.quality.is_retina === false;
+    const gradeColor = isInvalid ? "#ef4444" : (GRADE_COLORS[r.grade.level] || "#94a3b8");
+    const gradeText = isInvalid ? "REJECTED (Non-Retina)" : `L${r.grade.level} · ${esc(r.grade.label)}`;
+    const actionHtml = isInvalid 
+      ? '<span style="color:#ef4444; font-weight:700">⚠️ Invalid (Non-Retina)</span>'
+      : (r.grade.referable 
+          ? '<span style="color:var(--status-bad); font-weight:700">🚨 Refer to Specialist</span>' 
+          : '<span style="color:var(--status-ok)">✓ Routine Follow-up</span>');
+
+    return `
+      <tr>
+        <td style="font-family:var(--font-mono); font-weight:600">${esc(r.patient_id)}</td>
+        <td><b>${esc(r.name)}</b></td>
+        <td><span class="badge" style="background:var(--bg-surface-elevated); padding:3px 8px; border-radius:4px; font-family:var(--font-mono)">${r.quality.score}</span></td>
+        <td style="color:${gradeColor}; font-weight:700">${gradeText}</td>
+        <td>${actionHtml}</td>
+        <td style="font-family:var(--font-mono)">${r.grade.confidence ? r.grade.confidence.overall : 0}%</td>
+        <td style="font-family:var(--font-mono); color:var(--text-muted)">${r.latency_ms} ms</td>
+      </tr>
+    `;
+  }).join("");
 }
 
 function downloadCSV() {

@@ -162,12 +162,84 @@ def _get_retinal_mask(bgr: np.ndarray) -> Tuple[np.ndarray, Tuple[int, int, int]
 
 
 # ---------------------------------------------------------------------------
+# Out-of-Distribution (OOD) Non-Retinal Image Validator
+# ---------------------------------------------------------------------------
+def is_retinal_fundus(bgr: np.ndarray) -> Tuple[bool, str]:
+    """Robust Out-of-Distribution (OOD) validator.
+    Detects if an uploaded image is an authentic retinal fundus photograph
+    or an invalid non-retinal image (documents, selfies, landscapes, X-rays, pets, objects, etc.).
+    Returns (is_retina, rejection_reason).
+    """
+    h, w = bgr.shape[:2]
+    if h < 64 or w < 64:
+        return False, "Image dimensions too small (< 64x64)"
+
+    # Check chromatic distribution
+    b, g, r = cv2.split(bgr)
+    mean_b, mean_g, mean_r = float(b.mean()), float(g.mean()), float(r.mean())
+    total_rgb = mean_b + mean_g + mean_r + 1e-6
+
+    diff_rg = abs(mean_r - mean_g)
+    diff_gb = abs(mean_g - mean_b)
+    diff_rb = abs(mean_r - mean_b)
+    pixel_diff = float(np.mean(np.abs(r.astype(float) - g.astype(float))) + np.mean(np.abs(g.astype(float) - b.astype(float)))) / 2.0
+
+    # 1. Grayscale / monochrome / document scan
+    if pixel_diff < 6.0 or (diff_rg < 3.0 and diff_gb < 3.0 and diff_rb < 3.0):
+        return False, "Grayscale or monochrome document/scan (Non-retinal input)"
+
+    # 2. Spectral checks: Fundus tissue has strong hemoglobin red dominance
+    if (mean_b / total_rgb) > 0.35 or (mean_b > mean_r * 1.05 and mean_b > 40):
+        return False, "Invalid color spectrum (Excessive blue tone incompatible with fundus tissue)"
+    if (mean_g / total_rgb) > 0.45 or (mean_g > mean_r * 1.15 and mean_g > 50):
+        return False, "Invalid color spectrum (Excessive green tone incompatible with fundus tissue)"
+
+    # 3. Retinal anatomical structure check (vessels + optic disc)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    g_clahe = clahe.apply(g)
+    kernel_h = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 1))
+    kernel_v = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 15))
+    tophat = cv2.max(
+        cv2.morphologyEx(g_clahe, cv2.MORPH_TOPHAT, kernel_h),
+        cv2.morphologyEx(g_clahe, cv2.MORPH_TOPHAT, kernel_v)
+    )
+    vessel_score = float(tophat.std())
+    od_blur = cv2.GaussianBlur(g_clahe, (25, 25), 0)
+    od_contrast = float(od_blur.max() - od_blur.mean())
+
+    if vessel_score < 7.0 and od_contrast < 14.0:
+        return False, "No retinal blood vessels or optic nerve disc detected"
+
+    return True, "Authentic retinal fundus photograph"
+
+
+# ---------------------------------------------------------------------------
 # Stage 1: Retinal Capture Quality Gate
 # ---------------------------------------------------------------------------
 def quality_gate(img: Image.Image) -> dict:
-    """Real optical assessment of focus, illumination, contrast, FOV and artifacts."""
+    """Real optical assessment of focus, illumination, contrast, FOV, artifacts, and retinal validity."""
     bgr = _to_cv(img)
     h, w = bgr.shape[:2]
+
+    # Out-of-Distribution (OOD) check: verify image is an authentic retinal fundus photograph
+    is_retina, ood_reason = is_retinal_fundus(bgr)
+    if not is_retina:
+        return {
+            "score": 0.0,
+            "status": "invalid",
+            "is_retina": False,
+            "status_text": f"Non-Retinal Image Detected — {ood_reason}",
+            "rejection_reason": ood_reason,
+            "metrics": {
+                "Focus / Blur": 0.0,
+                "Illumination": 0.0,
+                "Contrast": 0.0,
+                "Field of view": 0.0,
+                "Artifacts": 0.0,
+            },
+            "fov_geom": (w // 2, h // 2, min(w, h) // 2),
+        }
+
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     fov_mask, (cx, cy, r) = _get_retinal_mask(bgr)
     fov_pixels = np.count_nonzero(fov_mask)
@@ -218,6 +290,8 @@ def quality_gate(img: Image.Image) -> dict:
         "score": score,
         "status": status,
         "status_text": text,
+        "is_retina": True,
+        "rejection_reason": "",
         "metrics": {
             "Focus / Blur": round(blur_score, 1),
             "Illumination": round(illum_score, 1),
@@ -537,6 +611,24 @@ def explanation(img: Image.Image, lesions: dict, grad_cam: np.ndarray) -> Image.
     return final_img.convert("RGB")
 
 
+def _build_non_retinal_overlay(orig: Image.Image, reason: str) -> Image.Image:
+    """Generate high-visibility clinical alert overlay for non-retinal images."""
+    w, h = orig.size
+    overlay = Image.new("RGBA", (w, h), (0, 0, 0, 150))
+    draw = ImageDraw.Draw(overlay)
+
+    banner_h = max(130, int(h * 0.28))
+    y0 = (h - banner_h) // 2
+    draw.rectangle([0, y0, w, y0 + banner_h], fill=(185, 28, 28, 235), outline=(239, 68, 68, 255), width=3)
+
+    draw.text((w // 2, y0 + int(banner_h * 0.25)), "ALERT: NON-RETINAL IMAGE DETECTED", fill=(255, 255, 255), anchor="mm")
+    draw.text((w // 2, y0 + int(banner_h * 0.52)), f"Reason: {reason}", fill=(254, 226, 226), anchor="mm")
+    draw.text((w // 2, y0 + int(banner_h * 0.78)), "Screening Halted · Please Upload Valid Fundus Photo", fill=(255, 255, 255), anchor="mm")
+
+    final_img = Image.alpha_composite(orig.convert("RGBA"), overlay)
+    return final_img.convert("RGB")
+
+
 # ---------------------------------------------------------------------------
 # Stage 7: Clinical Screening Report Builder
 # ---------------------------------------------------------------------------
@@ -545,20 +637,25 @@ def build_report(patient_id: str, q: dict, grade: dict, lesions: dict, name: str
     f = lesions["flags"]
     c = lesions["counts"]
 
-    if grade["referable"]:
+    if not q.get("is_retina", True):
+        rec = "RECAPTURE REQUIRED — UPLOAD VALID FUNDUS PHOTOGRAPH"
+        why = f"Quality Gate Rejection: {q.get('rejection_reason', 'Non-retinal input detected')}"
+        evidence = [f"Validation failure: {q.get('rejection_reason', 'Uploaded image is not a retinal photograph')}"]
+    elif grade["referable"]:
         rec = "URGENT REFERRAL TO OPHTHALMOLOGIST"
         why = "Referable Diabetic Retinopathy detected (Level {})".format(grade["level"])
     else:
         rec = "ROUTINE ANNUAL COMMUNITY FOLLOW-UP"
         why = "Non-referable at current screening examination"
 
-    evidence = []
-    if c["microaneurysms"]: evidence.append(f"Microaneurysms detected: {c['microaneurysms']} lesions")
-    if c["haemorrhages"]: evidence.append(f"Haemorrhages detected: {c['haemorrhages']} intra-retinal lesions")
-    if c["exudates"]: evidence.append(f"Hard Exudates detected: {c['exudates']} lipid deposits")
-    if f["soft_exudates"]: evidence.append("Cotton wool spots (nerve fiber layer infarcts)")
-    if f["neovascularisation"]: evidence.append("Neovascularisation (abnormal retinal vessel growth)")
-    if not evidence: evidence.append("No active DR lesions identified")
+    if q.get("is_retina", True):
+        evidence = []
+        if c["microaneurysms"]: evidence.append(f"Microaneurysms detected: {c['microaneurysms']} lesions")
+        if c["haemorrhages"]: evidence.append(f"Haemorrhages detected: {c['haemorrhages']} intra-retinal lesions")
+        if c["exudates"]: evidence.append(f"Hard Exudates detected: {c['exudates']} lipid deposits")
+        if f["soft_exudates"]: evidence.append("Cotton wool spots (nerve fiber layer infarcts)")
+        if f["neovascularisation"]: evidence.append("Neovascularisation (abnormal retinal vessel growth)")
+        if not evidence: evidence.append("No active DR lesions identified")
 
     lines = [
         "NETRAXAI · TELE-OPHTHALMOLOGY SCREENING CERTIFICATE",
@@ -578,7 +675,7 @@ def build_report(patient_id: str, q: dict, grade: dict, lesions: dict, name: str
         "AI DIAGNOSTIC CLASSIFICATION",
         "-----------------------------",
         f"ICDR Grade        : Level {grade['level']} — {grade['label']}",
-        f"Referable Action  : {'YES (URGENT EVALUATION)' if grade['referable'] else 'NO (COMMUNITY MONITORING)'}",
+        f"Referable Action  : {'YES (URGENT EVALUATION)' if grade['referable'] else ('REJECTED (INVALID SCAN)' if not q.get('is_retina', True) else 'NO (COMMUNITY MONITORING)')}",
         f"Calibrated Conf.  : {grade['confidence']['calibrated']:.1f}%",
         f"Overall Quality-AI: {grade['confidence']['overall']:.1f}%",
         f"Model Probabilities: {grade['confidence'].get('probabilities', [])}",
@@ -618,6 +715,39 @@ def run_pipeline(img: Image.Image, patient_id: str, name: str) -> dict:
     """Execute real-time Deep Learning + Computer Vision screening workflow on any fundus image."""
     orig = img
     q = quality_gate(img)
+
+    # If the input is not an eye retina (OOD rejection), halt screening and alert
+    if not q.get("is_retina", True) or q["status"] == "invalid":
+        grade = {
+            "level": -1,
+            "label": "Invalid Input (Non-Retina)",
+            "referable": False,
+            "confidence": {
+                "calibrated": 0.0,
+                "overall": 0.0,
+                "raw": 0.0,
+                "probabilities": [0.0, 0.0, 0.0, 0.0, 0.0]
+            },
+            "model_architecture": "EfficientNet-B0 (Bypassed)",
+        }
+        lesions = {
+            "flags": {"microaneurysms": False, "haemorrhages": False, "exudates": False, "soft_exudates": False, "neovascularisation": False},
+            "counts": {"microaneurysms": 0, "haemorrhages": 0, "exudates": 0, "soft_exudates": 0, "neovascularisation": 0},
+            "regions": {"ma": [], "hem": [], "ex": [], "soft": [], "nv": []}
+        }
+        expl = _build_non_retinal_overlay(orig, q.get("rejection_reason", "Non-retinal input"))
+        report = build_report(patient_id, q, grade, lesions, name)
+        return {
+            "quality": q,
+            "rejected": True,
+            "enhanced": None,
+            "lesions": {"flags": lesions["flags"], "counts": lesions["counts"]},
+            "grade": grade,
+            "explanation": expl,
+            "report": report,
+            "patient_id": patient_id,
+            "name": name,
+        }
 
     enhanced = None
     rejected = False
